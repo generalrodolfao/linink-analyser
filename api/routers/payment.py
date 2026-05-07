@@ -1,5 +1,7 @@
+import io
 import logging
-from fastapi import APIRouter, HTTPException, Request, BackgroundTasks
+import re
+from fastapi import APIRouter, HTTPException, Request, BackgroundTasks, UploadFile, File, Form
 from pydantic import BaseModel
 from services.cakto_service import build_checkout_url, get_order, is_paid
 from services.payment_service import (
@@ -28,6 +30,40 @@ class SessionStatusResponse(BaseModel):
     status: str
     profile_id: str | None = None
     overall_score: int | None = None
+
+
+@router.post("/checkout-pdf", response_model=CheckoutResponse)
+async def create_checkout_pdf(
+    pdf_file: UploadFile = File(...),
+    linkedin_url: str = Form(default=""),
+):
+    """Accept a LinkedIn PDF export, extract text, create payment session."""
+    from config import settings
+    if not settings.cakto_checkout_url:
+        raise HTTPException(status_code=503, detail="Pagamento não configurado ainda.")
+
+    if not pdf_file.filename or not pdf_file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=422, detail="Envie um arquivo PDF válido.")
+
+    try:
+        from pypdf import PdfReader
+        content = await pdf_file.read()
+        reader = PdfReader(io.BytesIO(content))
+        profile_text = "\n".join(page.extract_text() or "" for page in reader.pages)
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Erro ao ler PDF: {e}")
+
+    if not profile_text.strip():
+        raise HTTPException(status_code=422, detail="Não foi possível extrair texto do PDF. Use um PDF gerado pelo LinkedIn.")
+
+    # Try to find LinkedIn URL inside the PDF text if not provided
+    if not linkedin_url:
+        match = re.search(r'linkedin\.com/in/[\w\-]+', profile_text)
+        linkedin_url = f"https://www.{match.group()}" if match else "https://linkedin.com/in/unknown"
+
+    session_id = create_session(linkedin_url, profile_text)
+    checkout_url = build_checkout_url(session_id)
+    return CheckoutResponse(session_id=session_id, checkout_url=checkout_url)
 
 
 @router.post("/checkout", response_model=CheckoutResponse)
