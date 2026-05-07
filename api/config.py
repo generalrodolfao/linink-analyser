@@ -22,3 +22,6 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Strip whitespace/newlines from keys that may be pasted with formatting
+settings.anthropic_api_key = "".join(settings.anthropic_api_key.split())
