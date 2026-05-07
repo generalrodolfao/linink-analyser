@@ -1,0 +1,16 @@
+src/
+node_modules/
+.next/
+public/
+Lattice (1).html
+Lattice App.html
+components.json
+eslint.config.mjs
+postcss.config.mjs
+tsconfig.json
+tsconfig.tsbuildinfo
+next-env.d.ts
+README.md
+CLAUDE.md
+AGENTS.md
+package-lock.json

@@ -1,5 +1,5 @@
 {
-  "buildCommand": "",
+  "buildCommand": "echo done",
   "outputDirectory": ".",
   "framework": null,
   "rewrites": [
