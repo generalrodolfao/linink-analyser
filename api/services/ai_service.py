@@ -3,6 +3,23 @@ import re
 import anthropic
 from config import settings
 
+_PAGE_MARKER = re.compile(r'\s*Page \d+ of \d+\s*', re.IGNORECASE)
+_HTML_ENTITY = re.compile(r'&amp;|&lt;|&gt;|&quot;')
+_ENTITY_MAP = {'&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"'}
+
+
+def preprocess_linkedin_pdf(raw_text: str, max_chars: int = 6000) -> str:
+    """Clean and truncate LinkedIn PDF text before sending to Claude."""
+    text = _PAGE_MARKER.sub('\n', raw_text)
+    text = _HTML_ENTITY.sub(lambda m: _ENTITY_MAP[m.group()], text)
+    # Collapse excessive blank lines
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    text = text.strip()
+    if len(text) > max_chars:
+        # Keep beginning (header + summary) and truncate mid-experience
+        text = text[:max_chars] + '\n[... histórico anterior omitido ...]'
+    return text
+
 _client: anthropic.AsyncAnthropic | None = None
 
 
@@ -17,6 +34,62 @@ SCORE_CRITERIA = [
     "education", "recommendations", "connections",
     "activity", "completeness", "keywords",
 ]
+
+
+async def parse_and_score(raw_text: str) -> tuple[dict, dict]:
+    """
+    Single Claude call that both parses a LinkedIn PDF and scores the profile.
+    Returns (profile_data, scoring) — eliminates the sequential parse→score round trip.
+    """
+    text = preprocess_linkedin_pdf(raw_text)
+
+    prompt = f"""Você é especialista em recrutamento e LinkedIn. A partir do texto bruto de um PDF de perfil LinkedIn, faça DUAS coisas em um único JSON de resposta:
+
+1. Extraia os dados estruturados do perfil
+2. Avalie o perfil em 10 critérios
+
+Texto do perfil:
+{text}
+
+Retorne APENAS este JSON (sem texto antes ou depois):
+{{
+  "profile": {{
+    "full_name": "...",
+    "headline": "...",
+    "summary": "...",
+    "location": "...",
+    "profile_url": "...",
+    "experiences": [
+      {{"title": "...", "company": "...", "description": "...", "starts_at": {{"year": 2020}}, "ends_at": null}}
+    ],
+    "skills": ["...", "..."],
+    "education": [
+      {{"school": "...", "degree_name": "...", "starts_at": {{"year": 2015}}, "ends_at": {{"year": 2019}}}}
+    ],
+    "connections": null,
+    "recommendations_count": 0,
+    "certifications": ["..."],
+    "languages": ["..."]
+  }},
+  "scoring": {{
+    "overall_score": <inteiro 0-100>,
+    "score_breakdown": [
+      {{
+        "category": "<nome em português>",
+        "score": <inteiro 0-10>,
+        "max_score": 10,
+        "suggestions": ["<sugestão acionável>"]
+      }}
+    ]
+  }}
+}}
+
+Avalie exatamente estes 10 critérios: {', '.join(SCORE_CRITERIA)}
+O overall_score deve ser a média ponderada. Seja rigoroso mas construtivo."""
+
+    response_text = await _call_ai(prompt)
+    data = json.loads(_extract_json(response_text))
+    return data["profile"], data["scoring"]
 
 
 async def score_profile(profile_data: dict) -> dict:

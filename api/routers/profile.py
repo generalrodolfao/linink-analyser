@@ -1,4 +1,5 @@
 import io
+import re
 from fastapi import APIRouter, HTTPException, UploadFile, File
 from models.schemas import (
     ProfileAnalyzeRequest, ProfileAnalysisResponse, ProfileData, ScoreBreakdown,
@@ -12,32 +13,29 @@ router = APIRouter(prefix="/profile", tags=["Profile"])
 
 @router.post("/analyze-pdf", response_model=ProfileAnalysisResponse)
 async def analyze_profile_pdf(pdf_file: UploadFile = File(...)):
-    """Direct PDF upload → analysis without payment gate."""
+    """Direct PDF upload → parse + score in a single Claude call."""
+    from pypdf import PdfReader
+    from services.ai_service import parse_and_score
+
     try:
-        from pypdf import PdfReader
-        import re
         content = await pdf_file.read()
         reader = PdfReader(io.BytesIO(content))
-        profile_text = "\n".join(page.extract_text() or "" for page in reader.pages)
+        raw_text = "\n".join(page.extract_text() or "" for page in reader.pages)
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Erro ao ler PDF: {e}")
 
-    if not profile_text.strip():
+    if not raw_text.strip():
         raise HTTPException(status_code=422, detail="Não foi possível extrair texto do PDF.")
 
-    import re
-    match = re.search(r'linkedin\.com/in/[\w\-]+', profile_text)
-    linkedin_url = f"https://www.{match.group()}" if match else "https://linkedin.com/in/unknown"
-
     try:
-        raw_profile = await fetch_linkedin_profile(linkedin_url, profile_text)
+        raw_profile, scoring = await parse_and_score(raw_text)
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Erro ao processar perfil: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro na análise: {e}")
 
-    try:
-        scoring = await score_profile(raw_profile)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao pontuar perfil: {e}")
+    match = re.search(r'linkedin\.com/in/[\w\-]+', raw_text)
+    linkedin_url = raw_profile.get("profile_url") or (
+        f"https://www.{match.group()}" if match else "https://linkedin.com/in/unknown"
+    )
 
     overall_score = scoring.get("overall_score", 0)
     saved = await save_profile(linkedin_url=linkedin_url, profile_data=raw_profile, score=overall_score)
