@@ -251,7 +251,7 @@ main { position: relative; z-index: 2; }
 .hero-card {
   grid-row: 1;
   align-self: center;
-  width: 420px; justify-self: end;
+  width: min(420px, 100%); justify-self: end;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
@@ -306,7 +306,8 @@ main { position: relative; z-index: 2; }
 /* trust strip */
 .trust-strip {
   grid-column: 1 / -1;
-  display: flex; align-items: center; gap: 40px;
+  display: flex; align-items: center; gap: 24px 40px;
+  flex-wrap: wrap;
   padding-top: 40px;
   border-top: 1px solid var(--line-soft);
   align-self: end;
@@ -623,11 +624,11 @@ main { position: relative; z-index: 2; }
 .foot-mono { color: var(--fg-4); }
 
 /* ---------- RESPONSIVE FALLBACK ---------- */
-@media (max-width: 1180px) {
+@media (max-width: 1240px) {
   .canvas { min-height: unset; padding: 24px; display: grid; grid-template-columns: 1fr; gap: 16px; }
   .card { position: static; left: auto; top: auto; width: 100% !important; }
   .audit-grid { grid-template-columns: 1fr; }
   .recs-grid { grid-template-columns: 1fr; }
   .landing { grid-template-columns: 1fr; }
-  .hero-card { width: 100%; justify-self: stretch; }
+  .hero-card { width: 100%; max-width: 520px; justify-self: stretch; }
 }
