@@ -51,10 +51,10 @@ export default function OutreachPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Inteligência de Outreach</h1>
-        <p className="text-slate-500 text-sm">Gere pitches e e-mails de candidatura personalizados</p>
+        <h1 className="text-2xl font-bold text-foreground">Outreach</h1>
+        <p className="text-muted-foreground text-sm mt-1">Pitches e e-mails de candidatura personalizados</p>
       </div>
 
       <Card>
@@ -62,12 +62,12 @@ export default function OutreachPage() {
           <div className="space-y-2">
             <Label>Profile ID</Label>
             <Input
-              placeholder="UUID do perfil analisado (obtenha na Auditoria de Perfil)"
+              placeholder="UUID do perfil analisado"
               value={profileId}
               onChange={(e) => setProfileId(e.target.value)}
             />
           </div>
-          {error && <p className="text-sm text-red-600 bg-red-50 p-3 rounded-md">{error}</p>}
+          {error && <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">{error}</p>}
         </CardContent>
       </Card>
 
@@ -90,7 +90,7 @@ export default function OutreachPage() {
                   value={signal}
                   onChange={(e) => setSignal(e.target.value)}
                 />
-                <p className="text-xs text-slate-400">Descreva o contexto que justifica o contato (post, mudança de cargo, conquista, etc.)</p>
+                <p className="text-xs text-muted-foreground">Post, mudança de cargo, conquista — o contexto que justifica o contato.</p>
               </div>
               <Button onClick={handlePitch} disabled={loading.pitch}>
                 {loading.pitch ? 'Gerando...' : 'Gerar Pitches'}
@@ -98,12 +98,12 @@ export default function OutreachPage() {
               {pitches.length > 0 && (
                 <div className="space-y-3">
                   {pitches.map((p, i) => (
-                    <div key={i} className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
+                    <div key={i} className="p-4 bg-muted rounded-lg border border-border space-y-2">
                       <div className="flex justify-between items-center">
-                        <span className="text-xs text-slate-500 font-medium">Variação {i + 1}</span>
+                        <span className="text-xs text-muted-foreground font-medium">Variação {i + 1}</span>
                         <Button size="sm" variant="outline" onClick={() => copy(p)}>Copiar</Button>
                       </div>
-                      <p className="text-slate-700 text-sm">{p}</p>
+                      <p className="text-foreground text-sm">{p}</p>
                     </div>
                   ))}
                 </div>
@@ -119,7 +119,7 @@ export default function OutreachPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label>Descrição da Vaga (Job Description)</Label>
+                <Label>Descrição da Vaga</Label>
                 <Textarea
                   placeholder="Cole aqui a descrição completa da vaga..."
                   value={jobDescription}
@@ -136,8 +136,8 @@ export default function OutreachPage() {
                     <Label>E-mail Gerado</Label>
                     <Button size="sm" variant="outline" onClick={() => copy(applicationEmail)}>Copiar</Button>
                   </div>
-                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                    <p className="text-slate-700 text-sm whitespace-pre-wrap">{applicationEmail}</p>
+                  <div className="p-4 bg-muted rounded-lg border border-border">
+                    <p className="text-foreground text-sm whitespace-pre-wrap">{applicationEmail}</p>
                   </div>
                 </div>
               )}

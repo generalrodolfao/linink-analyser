@@ -9,9 +9,9 @@ import type { ScoreBreakdown } from '@/types'
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 function scoreColor(pct: number) {
-  if (pct >= 80) return 'text-green-600'
-  if (pct >= 60) return 'text-yellow-600'
-  return 'text-red-600'
+  if (pct >= 80) return 'text-green-400'
+  if (pct >= 60) return 'text-yellow-400'
+  return 'text-red-400'
 }
 
 type Step = 'form' | 'analyzing' | 'done' | 'error'
@@ -78,8 +78,8 @@ export default function ProfilePage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 text-center">
         <div className="text-5xl animate-spin">🤖</div>
-        <h2 className="text-2xl font-bold text-slate-900">Analisando seu perfil com IA...</h2>
-        <p className="text-slate-500 max-w-sm">Isso leva cerca de 20–30 segundos. Não feche esta página.</p>
+        <h2 className="text-2xl font-bold text-foreground">Analisando seu perfil com IA...</h2>
+        <p className="text-muted-foreground max-w-sm">Isso leva cerca de 20–30 segundos. Não feche esta página.</p>
         <Progress value={null} className="w-64" />
       </div>
     )
@@ -90,19 +90,19 @@ export default function ProfilePage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">
+          <h1 className="text-2xl font-bold text-foreground">
             {analysis.full_name ? `Análise de ${analysis.full_name}` : 'Análise de Perfil'}
           </h1>
-          {analysis.headline && <p className="text-slate-500 text-sm mt-1">{analysis.headline}</p>}
+          {analysis.headline && <p className="text-muted-foreground text-sm mt-1">{analysis.headline}</p>}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="flex flex-col items-center justify-center p-8 text-center">
-            <p className="text-slate-500 text-sm mb-2">Score Geral</p>
+            <p className="text-muted-foreground text-sm mb-2">Score Geral</p>
             <p className={`text-6xl font-bold ${scoreColor(analysis.overall_score)}`}>
               {analysis.overall_score}
             </p>
-            <p className="text-slate-400 text-sm mt-1">/ 100</p>
+            <p className="text-muted-foreground text-sm mt-1">/ 100</p>
             <div className="w-full mt-4">
               <Progress value={analysis.overall_score} />
             </div>
@@ -122,8 +122,8 @@ export default function ProfilePage() {
                       </div>
                       <Progress value={pct} />
                       {item.suggestions.map((s, i) => (
-                        <p key={i} className="text-xs text-slate-500 flex gap-1.5">
-                          <span className="text-amber-500 shrink-0">→</span>{s}
+                        <p key={i} className="text-xs text-muted-foreground flex gap-1.5">
+                          <span className="text-amber-400 shrink-0">→</span>{s}
                         </p>
                       ))}
                     </div>
@@ -135,11 +135,11 @@ export default function ProfilePage() {
         </div>
 
         <Card>
-          <CardContent className="pt-4 text-sm text-slate-600 space-y-2">
+          <CardContent className="pt-4 text-sm text-muted-foreground space-y-2">
             <p>
               Profile ID (use nas abas Branding e Outreach):{' '}
               <code
-                className="bg-slate-100 px-1.5 py-0.5 rounded cursor-pointer hover:bg-slate-200 text-xs"
+                className="bg-muted px-1.5 py-0.5 rounded cursor-pointer hover:bg-muted/80 text-xs font-mono"
                 onClick={() => navigator.clipboard.writeText(analysis.profile_id)}
                 title="Clique para copiar"
               >
@@ -159,8 +159,8 @@ export default function ProfilePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Auditoria de Perfil</h1>
-        <p className="text-slate-500 text-sm">Análise completa com IA em 10 critérios</p>
+        <h1 className="text-2xl font-bold text-foreground">Auditoria de Perfil</h1>
+        <p className="text-muted-foreground text-sm">Análise completa com IA em 10 critérios</p>
       </div>
 
       <Card>
@@ -168,8 +168,8 @@ export default function ProfilePage() {
           <CardTitle>Envie o PDF do seu LinkedIn</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
-          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-sm text-slate-600 space-y-1">
-            <p className="font-medium text-slate-800">Como exportar o PDF do LinkedIn:</p>
+          <div className="bg-muted border border-border rounded-lg p-4 text-sm text-muted-foreground space-y-1">
+            <p className="font-medium text-foreground">Como exportar o PDF do LinkedIn:</p>
             <ol className="list-decimal list-inside space-y-0.5">
               <li>Abra seu perfil no LinkedIn</li>
               <li>Clique em <strong>Mais</strong> → <strong>Salvar como PDF</strong></li>
@@ -217,9 +217,9 @@ export default function ProfilePage() {
 
           {error && <p className="text-sm text-red-600 bg-red-50 p-3 rounded-md">{error}</p>}
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-1">
-            <p className="text-sm font-medium text-blue-900">O que você recebe:</p>
-            <ul className="text-sm text-blue-700 space-y-0.5">
+          <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-1">
+            <p className="text-sm font-medium text-foreground">O que você recebe:</p>
+            <ul className="text-sm text-muted-foreground space-y-0.5">
               <li>✓ Score 0–100 com avaliação em 10 critérios</li>
               <li>✓ Sugestões de melhoria acionáveis por seção</li>
               <li>✓ Profile ID para gerar headlines, bio e banner</li>

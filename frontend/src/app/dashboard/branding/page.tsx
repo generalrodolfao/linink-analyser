@@ -48,10 +48,10 @@ export default function BrandingPage() {
   function copy(text: string) { navigator.clipboard.writeText(text) }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Geração de Branding</h1>
-        <p className="text-slate-500 text-sm">Crie headlines, bio e banner com inteligência artificial</p>
+        <h1 className="text-2xl font-bold text-foreground">Branding</h1>
+        <p className="text-muted-foreground text-sm mt-1">Headlines, bio e banner gerados com IA</p>
       </div>
 
       <Card>
@@ -59,20 +59,20 @@ export default function BrandingPage() {
           <div className="space-y-2">
             <Label>Profile ID</Label>
             <Input
-              placeholder="UUID do perfil analisado (obtenha na Auditoria de Perfil)"
+              placeholder="UUID do perfil analisado"
               value={profileId}
               onChange={(e) => setProfileId(e.target.value)}
             />
           </div>
-          {error && <p className="text-sm text-red-600 bg-red-50 p-3 rounded-md">{error}</p>}
+          {error && <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">{error}</p>}
         </CardContent>
       </Card>
 
       <Tabs defaultValue="headlines">
         <TabsList>
           <TabsTrigger value="headlines">Headlines</TabsTrigger>
-          <TabsTrigger value="bio">Bio / Resumo</TabsTrigger>
-          <TabsTrigger value="banner">Banner AI</TabsTrigger>
+          <TabsTrigger value="bio">Bio</TabsTrigger>
+          <TabsTrigger value="banner">Banner</TabsTrigger>
         </TabsList>
 
         <TabsContent value="headlines" className="mt-4">
@@ -89,14 +89,14 @@ export default function BrandingPage() {
               {headlines.length > 0 ? (
                 <div className="space-y-3">
                   {headlines.map((h, i) => (
-                    <div key={i} className="p-4 bg-slate-50 rounded-lg border border-slate-200 flex justify-between items-start gap-4">
-                      <p className="text-slate-800 text-sm">{h}</p>
+                    <div key={i} className="p-4 bg-muted rounded-lg border border-border flex justify-between items-start gap-4">
+                      <p className="text-foreground text-sm">{h}</p>
                       <Button size="sm" variant="outline" onClick={() => copy(h)}>Copiar</Button>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-slate-400 text-sm">Clique em "Gerar" para criar variações otimizadas para SEO.</p>
+                <p className="text-muted-foreground text-sm">Clique em &quot;Gerar&quot; para criar variações otimizadas.</p>
               )}
             </CardContent>
           </Card>
@@ -116,17 +116,17 @@ export default function BrandingPage() {
               {bios.length > 0 ? (
                 <div className="space-y-4">
                   {bios.map((b, i) => (
-                    <div key={i} className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
+                    <div key={i} className="p-4 bg-muted rounded-lg border border-border space-y-2">
                       <div className="flex justify-between items-center">
                         <Badge variant="outline">Variação {i + 1}</Badge>
                         <Button size="sm" variant="outline" onClick={() => copy(b)}>Copiar</Button>
                       </div>
-                      <p className="text-slate-700 text-sm whitespace-pre-wrap">{b}</p>
+                      <p className="text-foreground text-sm whitespace-pre-wrap">{b}</p>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-slate-400 text-sm">Clique em "Gerar" para criar variações do seu resumo profissional.</p>
+                <p className="text-muted-foreground text-sm">Clique em &quot;Gerar&quot; para criar seu resumo profissional.</p>
               )}
             </CardContent>
           </Card>
@@ -149,23 +149,23 @@ export default function BrandingPage() {
                   <img
                     src={bannerUrl}
                     alt="Banner LinkedIn"
-                    className="w-full rounded-lg border border-slate-200"
+                    className="w-full rounded-lg border border-border"
                     style={{ aspectRatio: '1584/396', objectFit: 'cover' }}
                   />
                   <a
                     href={bannerUrl}
                     download="banner-linkedin.png"
-                    className="flex h-8 w-full items-center justify-center rounded-lg border border-slate-300 text-sm hover:bg-slate-50 transition-colors"
+                    className="flex h-9 w-full items-center justify-center rounded-lg border border-border text-sm text-foreground hover:bg-muted transition-colors"
                   >
                     Baixar Banner
                   </a>
                 </>
               ) : (
                 <div
-                  className="bg-slate-100 rounded-lg flex items-center justify-center text-slate-400"
+                  className="bg-muted rounded-lg flex items-center justify-center text-muted-foreground border border-border"
                   style={{ aspectRatio: '1584/396' }}
                 >
-                  <p className="text-sm">Seu banner aparecerá aqui (1584 × 396 px)</p>
+                  <p className="text-sm">Seu banner aparecerá aqui</p>
                 </div>
               )}
             </CardContent>
