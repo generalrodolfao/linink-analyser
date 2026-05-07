@@ -1,5 +1,5 @@
-// Lattice — career copilot showcase
-// Three stacked sections: Landing · Dashboard · Profile Audit
+// Lattice — copiloto de carreira
+// Três seções: Landing · Dashboard · Auditoria
 
 const { useState, useEffect, useRef, useMemo } = React;
 
@@ -45,17 +45,17 @@ function TopNav() {
           <svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14l3 3 3-3-3 3z" stroke="currentColor" strokeWidth="1.5" fill="none"/></svg>
         </span>
         <span className="brand-name">Lattice</span>
-        <Mono className="brand-tag">/ career copilot</Mono>
+        <Mono className="brand-tag">/ copiloto de carreira</Mono>
       </div>
       <div className="nav-links">
-        <a href="#landing">Overview</a>
+        <a href="#landing">Visão geral</a>
         <a href="#dashboard">Workspace</a>
-        <a href="#audit">Audit</a>
+        <a href="#audit">Auditoria</a>
         <Mono className="kbd">⌘K</Mono>
       </div>
       <div className="nav-cta">
-        <button className="btn-ghost">Sign in</button>
-        <a href="/app" className="btn-primary" style={{textDecoration:'none'}}>Start free</a>
+        <button className="btn-ghost">Entrar</button>
+        <a href="/app" className="btn-primary" style={{textDecoration:'none'}}>Começar grátis</a>
       </div>
     </nav>
   );
@@ -69,36 +69,36 @@ function Landing({ accent }) {
       <div className="landing-grid">
         <div className="landing-eyebrow">
           <span className="dot" style={{ background: a.glow, boxShadow: `0 0 12px ${a.glow}` }} />
-          <Mono>v1.0 · public beta · for job seekers</Mono>
+          <Mono>v1.0 · beta público · para profissionais</Mono>
         </div>
 
         <h1 className="hero-type">
-          <span className="line">Your career,</span>
-          <span className="line italic">authored</span>
+          <span className="line">Sua carreira,</span>
+          <span className="line italic">reescrita</span>
           <span className="line">
-            by an <em className="hero-em" style={{ color: a.glow }}>elite</em> AI.
+            por uma IA de <em className="hero-em" style={{ color: a.glow }}>elite</em>.
           </span>
         </h1>
 
         <p className="hero-sub">
-          Lattice rewrites your professional presence — headline, bio, outreach,
-          banners — with the judgment of a top-tier career strategist. Quietly, in the background.
+          O Lattice reescreve sua presença profissional — headline, bio, outreach,
+          banners — com a visão de um estrategista de carreira sênior.
         </p>
 
         <div className="hero-cta">
           <a href="/app" className="btn-primary lg" style={{textDecoration:'none',display:'inline-flex',alignItems:'center',gap:'8px'}}>
-            <span>Audit my profile</span>
+            <span>Auditar meu perfil</span>
             <Mono className="btn-kbd">⏎</Mono>
           </a>
-          <button className="btn-ghost lg">Watch the 60-second tour</button>
+          <button className="btn-ghost lg">Ver demonstração</button>
         </div>
 
         <div className="hero-meta">
-          <div className="meta-item"><Mono className="num">94<span>/100</span></Mono><span className="lbl">avg. profile lift</span></div>
+          <div className="meta-item"><Mono className="num">94<span>/100</span></Mono><span className="lbl">melhora média de perfil</span></div>
           <div className="meta-divider" />
-          <div className="meta-item"><Mono className="num">12k</Mono><span className="lbl">profiles rewritten this week</span></div>
+          <div className="meta-item"><Mono className="num">12k</Mono><span className="lbl">perfis otimizados esta semana</span></div>
           <div className="meta-divider" />
-          <div className="meta-item"><Mono className="num">3.2×</Mono><span className="lbl">recruiter response rate</span></div>
+          <div className="meta-item"><Mono className="num">3.2×</Mono><span className="lbl">taxa de resposta de recrutadores</span></div>
         </div>
       </div>
 
@@ -106,39 +106,39 @@ function Landing({ accent }) {
       <div className="hero-card" aria-hidden>
         <div className="hero-card-head">
           <Mono>profile.draft</Mono>
-          <span className="pill">Strategist · GPT-class</span>
+          <span className="pill">Estrategista · Claude AI</span>
         </div>
         <div className="hero-card-body">
           <div className="kv">
             <Mono className="kv-k">headline</Mono>
             <div className="kv-v">
-              <span className="strike">Senior Product Designer at —</span>
-              <span className="rewrite" style={{ color: a.glow }}>Designs decisive product systems for fintech at scale.</span>
+              <span className="strike">Gerente de Produto Sênior na —</span>
+              <span className="rewrite" style={{ color: a.glow }}>Constrói sistemas de produto que escalam sem perder clareza.</span>
             </div>
           </div>
           <div className="kv">
-            <Mono className="kv-k">positioning</Mono>
-            <div className="kv-v">Operator, not generalist. 8 yrs shipping 0→1 surfaces.</div>
+            <Mono className="kv-k">posicionamento</Mono>
+            <div className="kv-v">Operador, não generalista. 8 anos entregando 0→1 em fintechs.</div>
           </div>
           <div className="kv">
-            <Mono className="kv-k">tone</Mono>
+            <Mono className="kv-k">tom</Mono>
             <div className="kv-v tone-row">
-              <span className="chip on">decisive</span>
-              <span className="chip on">warm</span>
-              <span className="chip">jargon-free</span>
-              <span className="chip">first-person</span>
+              <span className="chip on">direto</span>
+              <span className="chip on">humano</span>
+              <span className="chip">sem jargão</span>
+              <span className="chip">primeira pessoa</span>
             </div>
           </div>
         </div>
         <div className="hero-card-foot">
-          <Mono>3 alternates ready</Mono>
+          <Mono>3 alternativas prontas</Mono>
           <span className="caret">›</span>
         </div>
       </div>
 
       {/* Trust strip */}
       <div className="trust-strip">
-        <Mono className="trust-label">Used by candidates moving to</Mono>
+        <Mono className="trust-label">Usado por candidatos em processos em</Mono>
         <div className="trust-logos">
           {["STRIPE", "FIGMA", "RAMP", "VERCEL", "LINEAR", "ANTHROPIC", "RETOOL"].map(x => (
             <span key={x} className="logo-mark">{x}</span>
@@ -157,11 +157,11 @@ function Dashboard({ accent }) {
       <div className="section-head">
         <div>
           <Mono className="eyebrow">02 · workspace</Mono>
-          <h2>A canvas, not a dashboard.</h2>
+          <h2>Um canvas, não um painel.</h2>
         </div>
         <p className="section-lede">
-          Every artifact of your professional presence as a card you can pick up,
-          rewrite, and place back. Lattice keeps the whole story in view.
+          Cada elemento da sua presença profissional como um card que você pega,
+          reescreve e devolve. O Lattice mantém a história completa em vista.
         </p>
       </div>
 
@@ -169,33 +169,33 @@ function Dashboard({ accent }) {
         {/* Greeting / focus card */}
         <article className="card card-focus" style={{ "--x": "0%", "--y": "0%", "--w": "440px" }}>
           <div className="focus-head">
-            <Mono>Tuesday · 09:14</Mono>
+            <Mono>Terça · 09:14</Mono>
             <span className="status-dot" style={{ background: a.glow, boxShadow: `0 0 8px ${a.glow}` }} />
           </div>
           <h3 className="focus-title">
-            Good morning, Maya.<br/>
-            Three things would move <em style={{ color: a.glow }}>your week</em>.
+            Bom dia, Marina.<br/>
+            Três coisas vão mover <em style={{ color: a.glow }}>a sua semana</em>.
           </h3>
           <ol className="focus-list">
-            <li><span className="num">01</span><span>Tighten your headline — it&rsquo;s burying the lede.</span></li>
-            <li><span className="num">02</span><span>Re-sequence the &ldquo;About&rdquo; section. Lead with outcomes.</span></li>
-            <li><span className="num">03</span><span>Send 4 outreach drafts I prepared overnight.</span></li>
+            <li><span className="num">01</span><span>Ajuste a headline — ela enterra o que importa.</span></li>
+            <li><span className="num">02</span><span>Reordene o &ldquo;Sobre&rdquo;. Comece com resultados.</span></li>
+            <li><span className="num">03</span><span>Envie os 4 rascunhos de outreach que preparei.</span></li>
           </ol>
           <div className="focus-foot">
-            <button className="btn-primary sm">Run all</button>
-            <button className="btn-ghost sm">Review one-by-one</button>
+            <button className="btn-primary sm">Executar tudo</button>
+            <button className="btn-ghost sm">Revisar um a um</button>
           </div>
         </article>
 
         {/* Profile score mini */}
         <article className="card card-score" style={{ "--x": "470px", "--y": "0px", "--w": "300px" }}>
-          <Mono className="card-label">profile · live</Mono>
+          <Mono className="card-label">perfil · ao vivo</Mono>
           <div className="score-num">
             <span className="big">87</span>
             <span className="suffix">/100</span>
           </div>
           <div className="score-trend">
-            <Mono>+14 this month</Mono>
+            <Mono>+14 este mês</Mono>
             <svg className="spark" viewBox="0 0 120 32" preserveAspectRatio="none">
               <path d="M0 24 L20 22 L40 18 L60 19 L80 12 L100 8 L120 4" fill="none" stroke={a.glow} strokeWidth="1.5"/>
             </svg>
@@ -203,9 +203,9 @@ function Dashboard({ accent }) {
           <div className="score-rings">
             {[
               ["Headline", 92],
-              ["About",    78],
+              ["Sobre",    78],
               ["Skills",   84],
-              ["Activity", 71]
+              ["Atividade", 71]
             ].map(([k, v]) => (
               <div key={k} className="ring-row">
                 <span className="ring-k">{k}</span>
@@ -219,42 +219,42 @@ function Dashboard({ accent }) {
         {/* Outreach generator */}
         <article className="card card-chat" style={{ "--x": "0px", "--y": "360px", "--w": "470px" }}>
           <div className="chat-head">
-            <Mono>outreach · draft 03</Mono>
-            <span className="pill subtle">to: Priya Shah · Head of Design, Ramp</span>
+            <Mono>outreach · rascunho 03</Mono>
+            <span className="pill subtle">para: Ana Lima · Head de Design, Ramp</span>
           </div>
           <div className="chat-body">
             <div className="chat-msg from-ai">
-              <span className="who">Strategist</span>
-              <p>I&rsquo;d open with the Ramp redesign — it&rsquo;s the strongest signal of fit. Want me to draft three openers ranging from warm to direct?</p>
+              <span className="who">Estrategista</span>
+              <p>Eu abriria com o redesign do Ramp — é o sinal mais forte de fit. Posso gerar três openers do mais caloroso ao mais direto?</p>
             </div>
             <div className="chat-msg from-user">
-              <span className="who">Maya</span>
-              <p>Direct, but show I read her teardown.</p>
+              <span className="who">Marina</span>
+              <p>Direto, mas mostre que li o teardown dela.</p>
             </div>
             <div className="chat-msg from-ai">
-              <span className="who">Strategist</span>
-              <p>Got it. Drafting now — 47 words, no fluff, ends with a single concrete ask.</p>
+              <span className="who">Estrategista</span>
+              <p>Entendido. Rascunhando — 47 palavras, sem enrolação, termina com um pedido concreto.</p>
               <div className="thinking">
                 <span /><span /><span />
-                <Mono>composing</Mono>
+                <Mono>redigindo</Mono>
               </div>
             </div>
           </div>
           <div className="chat-input">
-            <input placeholder="Reply, or press / for commands" />
+            <input placeholder="Responda, ou pressione / para comandos" />
             <Mono className="kbd">⌘ ⏎</Mono>
           </div>
         </article>
 
         {/* Headline alternates */}
         <article className="card card-alt" style={{ "--x": "490px", "--y": "320px", "--w": "330px" }}>
-          <Mono className="card-label">headline · 4 alternates</Mono>
+          <Mono className="card-label">headline · 4 alternativas</Mono>
           <div className="alt-list">
             {[
-              { txt: "Designs decisive product systems for fintech at scale.", on: true },
-              { txt: "Senior PD turning ambiguous problems into shipped product.", on: false },
-              { txt: "I make payments products feel obvious.", on: false },
-              { txt: "Product designer · 0→1 · fintech · 8 yrs.", on: false }
+              { txt: "Constrói sistemas de produto que escalam sem perder clareza.", on: true },
+              { txt: "GP transformando problemas ambíguos em produto entregue.", on: false },
+              { txt: "Faço produtos de pagamento parecerem óbvios.", on: false },
+              { txt: "Product manager · 0→1 · fintech · 8 anos.", on: false }
             ].map((x, i) => (
               <div key={i} className={`alt-row ${x.on ? "on" : ""}`}>
                 <span className="alt-mark" style={x.on ? { background: a.glow } : {}} />
@@ -262,12 +262,12 @@ function Dashboard({ accent }) {
               </div>
             ))}
           </div>
-          <button className="btn-ghost sm wide">Generate 3 more</button>
+          <button className="btn-ghost sm wide">Gerar 3 mais</button>
         </article>
 
         {/* Banner card */}
         <article className="card card-banner" style={{ "--x": "840px", "--y": "0px", "--w": "300px" }}>
-          <Mono className="card-label">banner · concept</Mono>
+          <Mono className="card-label">banner · conceito</Mono>
           <div className="banner-preview" style={{
             background: `linear-gradient(120deg, oklch(0.18 0.02 270), ${a.deep} 60%, oklch(0.18 0.02 270))`
           }}>
@@ -280,7 +280,7 @@ function Dashboard({ accent }) {
             </span>
           </div>
           <div className="banner-meta">
-            <span>Quietly editorial</span>
+            <span>Discretamente editorial</span>
             <Mono>1584 × 396</Mono>
           </div>
         </article>
@@ -289,17 +289,17 @@ function Dashboard({ accent }) {
         <article className="card card-signals" style={{ "--x": "840px", "--y": "320px", "--w": "300px" }}>
           <Mono className="card-label">signals · 24h</Mono>
           <ul className="signal-list">
-            <li><span className="sig-tag" style={{ borderColor: a.glow, color: a.glow }}>view</span><span>Recruiter at Stripe viewed your profile twice.</span></li>
-            <li><span className="sig-tag">save</span><span>Priya Shah saved your post on systems.</span></li>
-            <li><span className="sig-tag">match</span><span>3 new roles match your positioning.</span></li>
+            <li><span className="sig-tag" style={{ borderColor: a.glow, color: a.glow }}>view</span><span>Recrutadora da Stripe viu seu perfil duas vezes.</span></li>
+            <li><span className="sig-tag">save</span><span>Ana Lima salvou seu post sobre sistemas.</span></li>
+            <li><span className="sig-tag">match</span><span>3 vagas novas combinam com seu posicionamento.</span></li>
           </ul>
         </article>
 
         {/* Floating command hint */}
         <div className="cmd-hint">
-          <Mono>Press</Mono>
+          <Mono>Pressione</Mono>
           <Mono className="kbd">⌘K</Mono>
-          <Mono>for the copilot</Mono>
+          <Mono>para o copiloto</Mono>
         </div>
       </div>
     </section>
@@ -310,24 +310,24 @@ function Dashboard({ accent }) {
 function Audit({ accent }) {
   const a = ACCENTS[accent];
   const sections = [
-    { k: "Headline",     v: 92, note: "Decisive. Reads in under a second." },
-    { k: "About",        v: 78, note: "Strong opening; middle drifts into list-form." },
-    { k: "Experience",   v: 84, note: "Outcomes lead 4 of 6 roles. Tighten the other two." },
-    { k: "Skills",       v: 88, note: "Endorsements concentrated on signature skills." },
-    { k: "Activity",     v: 71, note: "Cadence is uneven. Aim for 2 posts/wk for 6 wks." },
-    { k: "Recommendations", v: 64, note: "Two new asks would lift this materially." }
+    { k: "Headline",        v: 92, note: "Direta. Lida em menos de um segundo." },
+    { k: "Sobre",           v: 78, note: "Abertura forte; meio deriva para listas." },
+    { k: "Experiência",     v: 84, note: "Resultados lideram 4 de 6 cargos. Ajuste os outros dois." },
+    { k: "Skills",          v: 88, note: "Endorsements concentrados nas competências principais." },
+    { k: "Atividade",       v: 71, note: "Cadência irregular. Mire 2 posts/sem por 6 semanas." },
+    { k: "Recomendações",   v: 64, note: "Dois pedidos novos elevariam materialmente." }
   ];
 
   return (
     <section id="audit" className="section audit" data-screen-label="03 Audit">
       <div className="section-head">
         <div>
-          <Mono className="eyebrow">03 · audit</Mono>
-          <h2>Your presence, read like a pulse.</h2>
+          <Mono className="eyebrow">03 · auditoria</Mono>
+          <h2>Sua presença, lida como um pulso.</h2>
         </div>
         <p className="section-lede">
-          Lattice listens to every signal your profile emits — clarity, cadence,
-          conviction — and renders it back as a living waveform.
+          O Lattice lê cada sinal que seu perfil emite — clareza, cadência,
+          convicção — e devolve como uma forma de onda viva.
         </p>
       </div>
 
@@ -337,17 +337,17 @@ function Audit({ accent }) {
           <div className="pulse-num">
             <span className="big">87</span>
             <div className="num-side">
-              <Mono className="lbl">composite score</Mono>
-              <Mono className="delta" style={{ color: a.glow }}>▲ 14 in 30 days</Mono>
+              <Mono className="lbl">pontuação geral</Mono>
+              <Mono className="delta" style={{ color: a.glow }}>▲ 14 em 30 dias</Mono>
             </div>
           </div>
 
           <Pulse accent={a} />
 
           <div className="pulse-legend">
-            <div><span className="dot" style={{ background: a.glow }} /><Mono>signal</Mono></div>
-            <div><span className="dot" style={{ background: "oklch(0.45 0.02 270)" }} /><Mono>baseline</Mono></div>
-            <div><span className="dot" style={{ background: a.soft, opacity:.7 }} /><Mono>30-day envelope</Mono></div>
+            <div><span className="dot" style={{ background: a.glow }} /><Mono>sinal</Mono></div>
+            <div><span className="dot" style={{ background: "oklch(0.45 0.02 270)" }} /><Mono>base</Mono></div>
+            <div><span className="dot" style={{ background: a.soft, opacity:.7 }} /><Mono>envelope 30 dias</Mono></div>
           </div>
         </div>
 
@@ -370,18 +370,18 @@ function Audit({ accent }) {
 
       {/* Recommendations row */}
       <div className="recs">
-        <Mono className="recs-eyebrow">three moves · ranked by lift</Mono>
+        <Mono className="recs-eyebrow">três ações · por impacto</Mono>
         <div className="recs-grid">
           {[
-            { lift: "+8", t: "Rewrite the About opener.", body: "Lead with the most counter-intuitive thing you believe about your craft." },
-            { lift: "+5", t: "Request 2 recommendations.", body: "Target peers who&rsquo;ve seen you ship — not managers." },
-            { lift: "+4", t: "Post twice this week.", body: "Short, opinionated, no images. Lattice will draft both for you." }
+            { lift: "+8", t: "Reescreva a abertura do Sobre.", body: "Comece com a coisa mais contraintuitiva que você acredita sobre o seu trabalho." },
+            { lift: "+5", t: "Peça 2 recomendações.", body: "Foque em pares que viram você entregar — não gestores." },
+            { lift: "+4", t: "Poste duas vezes esta semana.", body: "Curto, opinativo, sem imagens. O Lattice vai redigir os dois para você." }
           ].map((r, i) => (
             <article key={i} className="rec-card">
               <Mono className="rec-lift" style={{ color: a.glow }}>{r.lift}</Mono>
               <h4>{r.t}</h4>
               <p dangerouslySetInnerHTML={{ __html: r.body }} />
-              <button className="btn-ghost sm">Run with copilot</button>
+              <button className="btn-ghost sm">Executar com copiloto</button>
             </article>
           ))}
         </div>
@@ -392,9 +392,7 @@ function Audit({ accent }) {
 
 // SVG pulse / waveform
 function Pulse({ accent }) {
-  // Build two layered paths: envelope (soft) + signal (sharp)
   const W = 920, H = 220, mid = H/2;
-  // Generate a deterministic pseudo-pulse
   const pts = useMemo(() => {
     const out = [];
     for (let x = 0; x <= W; x += 8) {
@@ -414,16 +412,13 @@ function Pulse({ accent }) {
   return (
     <div className="pulse-wrap">
       <svg className="pulse-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
-        {/* grid */}
         <g opacity="0.18">
           {Array.from({length: 11}).map((_, i) => (
             <line key={i} x1={i*W/10} y1="0" x2={i*W/10} y2={H} stroke="currentColor" strokeWidth="0.5"/>
           ))}
           <line x1="0" y1={mid} x2={W} y2={mid} stroke="currentColor" strokeWidth="0.5" strokeDasharray="2 4"/>
         </g>
-        {/* envelope */}
         <path d={env} fill="none" stroke={accent.soft} strokeWidth="1.2" opacity="0.45" />
-        {/* signal */}
         <path className="pulse-sig" d={d} fill="none" stroke={accent.glow} strokeWidth="1.6" filter="url(#glow)" />
         <defs>
           <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
@@ -433,7 +428,7 @@ function Pulse({ accent }) {
         </defs>
       </svg>
       <div className="pulse-ticks">
-        {["clarity","conviction","cadence","craft","candor"].map(t => (
+        {["clareza","convicção","cadência","qualidade","autenticidade"].map(t => (
           <Mono key={t} className="tick">{t}</Mono>
         ))}
       </div>
@@ -452,7 +447,7 @@ function Foot({ accent }) {
           </span>
           <span className="brand-name">Lattice</span>
         </div>
-        <Mono className="foot-mono">© 2026 · made for people who take their work seriously.</Mono>
+        <Mono className="foot-mono">© 2026 · feito para quem leva o trabalho a sério.</Mono>
       </div>
     </footer>
   );
@@ -464,7 +459,6 @@ function App() {
   const accent = t.accent in ACCENTS ? t.accent : "violet";
   const a = ACCENTS[accent];
 
-  // expose accent-derived CSS vars
   useEffect(() => {
     const r = document.documentElement;
     r.style.setProperty("--accent", a.glow);

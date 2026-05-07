@@ -75,16 +75,17 @@ Retorne APENAS este JSON (sem texto antes ou depois):
     "overall_score": <inteiro 0-100>,
     "score_breakdown": [
       {{
-        "category": "<nome em português>",
+        "category": "<use exatamente um de: headline, summary, experience, skills, education, recommendations, connections, activity, completeness, keywords>",
         "score": <inteiro 0-10>,
         "max_score": 10,
-        "suggestions": ["<sugestão acionável>"]
+        "suggestions": ["<sugestão acionável em português>"]
       }}
     ]
   }}
 }}
 
 Avalie exatamente estes 10 critérios: {', '.join(SCORE_CRITERIA)}
+IMPORTANTE: o campo "category" deve usar exatamente os nomes acima (em inglês). As sugestões devem estar em português.
 O overall_score deve ser a média ponderada. Seja rigoroso mas construtivo."""
 
     response_text = await _call_ai(prompt)
@@ -103,17 +104,17 @@ Retorne APENAS um JSON válido com esta estrutura exata:
   "overall_score": <inteiro 0-100>,
   "score_breakdown": [
     {{
-      "category": "<nome em português>",
+      "category": "<use exatamente um de: headline, summary, experience, skills, education, recommendations, connections, activity, completeness, keywords>",
       "score": <inteiro 0-10>,
       "max_score": 10,
-      "suggestions": ["<sugestão acionável 1>", "<sugestão acionável 2>"]
+      "suggestions": ["<sugestão acionável em português 1>", "<sugestão acionável em português 2>"]
     }}
   ]
 }}
 
 Avalie exatamente estes 10 critérios (cada um vale até 10 pontos):
 {', '.join(SCORE_CRITERIA)}
-
+IMPORTANTE: o campo "category" deve usar exatamente os nomes acima (em inglês). As sugestões devem estar em português.
 O overall_score deve ser a média ponderada dos critérios. Se campos estiverem ausentes/nulos, penalize proporcionalmente. Seja rigoroso mas construtivo."""
 
     response_text = await _call_ai(prompt)

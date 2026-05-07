@@ -1,6 +1,5 @@
-// Lattice App — connected analysis flow
-// Screens: Connect → Audit → Brand Studio → Outreach
-// Glue: persistent score header, unresolved threads, copilot rail
+// Lattice App — fluxo de análise conectado
+// Telas: Conectar → Auditoria → Brand Studio → Outreach
 
 const { useState, useEffect, useRef, useMemo, useCallback } = React;
 
@@ -21,8 +20,10 @@ const ACCENTS = {
   ice:     { name: "Ice",     glow: "oklch(0.78 0.13 220)", soft: "oklch(0.60 0.13 220)", deep: "oklch(0.32 0.10 220)" }
 };
 
-// ---------- Category → screen/target mapping ----------
+// Mapeamento de categoria (EN, como retornado pela API) → tela/alvo
+// Também inclui variantes em PT caso a IA retorne traduzido
 const CATEGORY_MAP = {
+  // Inglês (padrão da API)
   headline:        { screen: "brand", target: "headline" },
   summary:         { screen: "brand", target: "bio" },
   experience:      { screen: "brand", target: "bio" },
@@ -33,6 +34,23 @@ const CATEGORY_MAP = {
   activity:        { screen: "outreach", target: "post" },
   completeness:    { screen: "brand", target: "bio" },
   keywords:        { screen: "brand", target: "headline" },
+  // Variantes em PT (fallback)
+  'título profissional': { screen: "brand", target: "headline" },
+  'título':              { screen: "brand", target: "headline" },
+  'resumo':              { screen: "brand", target: "bio" },
+  'sobre':               { screen: "brand", target: "bio" },
+  'experiência':         { screen: "brand", target: "bio" },
+  'experiencias':        { screen: "brand", target: "bio" },
+  'habilidades':         { screen: "brand", target: "headline" },
+  'competências':        { screen: "brand", target: "headline" },
+  'educação':            { screen: "brand", target: "bio" },
+  'formação':            { screen: "brand", target: "bio" },
+  'recomendações':       { screen: "outreach", target: "post" },
+  'conexões':            { screen: "outreach", target: "ramp" },
+  'atividade':           { screen: "outreach", target: "post" },
+  'completude':          { screen: "brand", target: "bio" },
+  'preenchimento':       { screen: "brand", target: "bio" },
+  'palavras-chave':      { screen: "brand", target: "headline" },
 };
 
 function generateThreadsFromBreakdown(breakdown) {
@@ -48,7 +66,7 @@ function generateThreadsFromBreakdown(breakdown) {
         id: `T${String(i + 1).padStart(2, '0')}`,
         n: String(i + 1).padStart(2, '0'),
         area: item.category,
-        title: item.suggestions?.[0] || `Improve your ${item.category}`,
+        title: item.suggestions?.[0] || `Melhorar ${item.category}`,
         lift: Math.max(1, Math.round((1 - pct) * 10)),
         severity: pct < 0.5 ? 'high' : pct < 0.7 ? 'medium' : 'low',
         note: item.suggestions?.slice(1, 3).join(' ') || '',
@@ -66,13 +84,13 @@ async function apiFetch(path, body) {
     body: JSON.stringify(body),
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: 'Unknown error' }));
-    throw new Error(err.detail || 'API error');
+    const err = await res.json().catch(() => ({ detail: 'Erro desconhecido' }));
+    throw new Error(err.detail || 'Erro na API');
   }
   return res.json();
 }
 
-// ---------- Ambient field ----------
+// ---------- Gradiente ambiente ----------
 function AmbientField({ accent, visible }) {
   if (!visible) return null;
   const a = ACCENTS[accent];
@@ -85,16 +103,15 @@ function AmbientField({ accent, visible }) {
   );
 }
 
-// ---------- Mono ----------
 const Mono = ({ children, className="", ...p }) => <span className={`mono ${className}`} {...p}>{children}</span>;
 
-// ---------- Sidebar ----------
+// ---------- Barra lateral ----------
 function Sidebar({ screen, setScreen, threads }) {
   const items = [
-    { k: "connect",  label: "Connect",     icon: "M3 12h18M3 6h18M3 18h18" },
-    { k: "audit",    label: "Audit",       icon: "M3 12c4-8 14-8 18 0" },
-    { k: "brand",    label: "Brand Studio",icon: "M4 20l4-12 4 8 4-4 4 8" },
-    { k: "outreach", label: "Outreach",    icon: "M3 5h18v12H8l-5 4z" },
+    { k: "connect",  label: "Conectar",     icon: "M3 12h18M3 6h18M3 18h18" },
+    { k: "audit",    label: "Auditoria",    icon: "M3 12c4-8 14-8 18 0" },
+    { k: "brand",    label: "Brand Studio", icon: "M4 20l4-12 4 8 4-4 4 8" },
+    { k: "outreach", label: "Outreach",     icon: "M3 5h18v12H8l-5 4z" },
   ];
   return (
     <aside className="sidebar">
@@ -121,7 +138,7 @@ function Sidebar({ screen, setScreen, threads }) {
           <div className="avatar">L</div>
           <div>
             <div className="user-name">Lattice</div>
-            <Mono className="user-sub">career copilot</Mono>
+            <Mono className="user-sub">copiloto de carreira</Mono>
           </div>
         </div>
       </div>
@@ -129,7 +146,7 @@ function Sidebar({ screen, setScreen, threads }) {
   );
 }
 
-// ---------- Score Header ----------
+// ---------- Header de pontuação ----------
 function ScoreHeader({ score, prevScore, threads, accent }) {
   const a = ACCENTS[accent];
   const open = threads.filter(t => !t.resolved).length;
@@ -141,7 +158,7 @@ function ScoreHeader({ score, prevScore, threads, accent }) {
         <div className="score-block">
           <span className="score-num-big">{score}</span>
           <div className="score-meta">
-            <Mono className="score-lbl">composite score</Mono>
+            <Mono className="score-lbl">pontuação geral</Mono>
             {delta !== 0 && (
               <Mono className="score-delta" style={{ color: a.glow }}>
                 {delta > 0 ? "▲" : "▽"} {Math.abs(delta)}
@@ -151,7 +168,7 @@ function ScoreHeader({ score, prevScore, threads, accent }) {
         </div>
         <div className="score-divider" />
         <div className="thread-count">
-          <Mono>threads</Mono>
+          <Mono>pendências</Mono>
           <div className="thread-pips">
             {threads.map(t => (
               <span key={t.id} className={`pip ${t.resolved ? "done" : ""}`} title={t.title} />
@@ -163,27 +180,27 @@ function ScoreHeader({ score, prevScore, threads, accent }) {
       <div className="scorebar-right">
         <div className="session-pill">
           <span className="pulse-dot" style={{ background: a.glow, boxShadow: `0 0 10px ${a.glow}` }} />
-          <Mono>session · live</Mono>
+          <Mono>sessão · ao vivo</Mono>
         </div>
       </div>
     </header>
   );
 }
 
-// ---------- Thread Tray ----------
+// ---------- Bandeja de pendências ----------
 function ThreadTray({ threads, onOpen, accent }) {
   const [open, setOpen] = useState(true);
   const a = ACCENTS[accent];
   const unresolved = threads.filter(t => !t.resolved);
   if (unresolved.length === 0) return (
     <div className="thread-tray empty">
-      <Mono>all threads resolved · ▲ {threads.reduce((s,t) => s + t.lift, 0)} pts gained</Mono>
+      <Mono>todas resolvidas · ▲ {threads.reduce((s,t) => s + t.lift, 0)} pts ganhos</Mono>
     </div>
   );
   return (
     <div className={`thread-tray ${open ? "open" : ""}`}>
       <button className="tray-toggle" onClick={() => setOpen(!open)}>
-        <Mono>unresolved threads · {unresolved.length}</Mono>
+        <Mono>pendências abertas · {unresolved.length}</Mono>
         <span className="caret">{open ? "▾" : "▴"}</span>
       </button>
       {open && (
@@ -204,7 +221,7 @@ function ThreadTray({ threads, onOpen, accent }) {
   );
 }
 
-// ---------- Copilot Rail ----------
+// ---------- Painel copiloto ----------
 function CopilotRail({ context, accent, visible }) {
   if (!visible) return null;
   const a = ACCENTS[accent];
@@ -212,26 +229,26 @@ function CopilotRail({ context, accent, visible }) {
     <aside className="copilot">
       <div className="copilot-head">
         <span className="copilot-glyph" style={{ background: a.glow }} />
-        <Mono>strategist</Mono>
+        <Mono>estrategista</Mono>
       </div>
       <div className="copilot-body">
         {context.map((m, i) => (
           <div key={i} className={`co-msg co-${m.kind}`}>
             {m.kind === "think" && <div className="thinking"><span/><span/><span/></div>}
             <p>{m.text}</p>
-            {m.lift && <Mono className="co-lift" style={{ color: a.glow }}>+{m.lift} expected</Mono>}
+            {m.lift && <Mono className="co-lift" style={{ color: a.glow }}>+{m.lift} esperado</Mono>}
           </div>
         ))}
       </div>
       <div className="copilot-foot">
-        <Mono>quiet when there's nothing useful to say</Mono>
+        <Mono>silencioso quando não há nada útil a dizer</Mono>
       </div>
     </aside>
   );
 }
 
 // ============================================================
-// SCREEN: CONNECT — PDF upload
+// TELA: CONECTAR — upload de PDF
 // ============================================================
 function ConnectScreen({ onComplete, accent }) {
   const a = ACCENTS[accent];
@@ -242,12 +259,19 @@ function ConnectScreen({ onComplete, accent }) {
   const [errMsg, setErrMsg] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef(null);
-  const phases = ["Reading headline & positioning", "Parsing About section", "Indexing experience", "Mapping skills graph", "Sampling activity cadence", "Composing diagnosis"];
+  const phases = [
+    "Lendo headline e posicionamento",
+    "Analisando seção Sobre",
+    "Mapeando experiências",
+    "Indexando habilidades",
+    "Avaliando cadência de atividade",
+    "Compondo diagnóstico",
+  ];
 
   const handleFile = (f) => {
     if (!f) return;
     if (!f.name.toLowerCase().endsWith('.pdf')) {
-      setErrMsg('Only PDF files are accepted');
+      setErrMsg('Apenas arquivos PDF são aceitos');
       return;
     }
     setErrMsg('');
@@ -271,12 +295,12 @@ function ConnectScreen({ onComplete, accent }) {
       const res = await fetch(`${API}/profile/analyze-pdf`, { method: 'POST', body: form });
       clearInterval(id);
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: 'Unknown error' }));
-        throw new Error(err.detail || 'Analysis failed');
+        const err = await res.json().catch(() => ({ detail: 'Erro desconhecido' }));
+        throw new Error(err.detail || 'Análise falhou');
       }
       const data = await res.json();
       setProgress(100);
-      setPhase("Diagnosis ready.");
+      setPhase("Diagnóstico pronto.");
       setStage("done");
       setTimeout(() => onComplete(data), 900);
     } catch (e) {
@@ -289,16 +313,16 @@ function ConnectScreen({ onComplete, accent }) {
   const reset = () => { setStage("idle"); setFile(null); setProgress(0); setErrMsg(""); };
 
   return (
-    <div className="screen connect-screen" data-screen-label="Connect">
+    <div className="screen connect-screen" data-screen-label="Conectar">
       <div className="connect-shell">
-        <Mono className="connect-eyebrow">step 01 · connect</Mono>
+        <Mono className="connect-eyebrow">passo 01 · conectar</Mono>
         <h1 className="connect-h1">
-          Upload your LinkedIn PDF.<br/>
-          <em style={{ color: a.glow }}>We'll read it like a strategist would.</em>
+          Envie seu PDF do LinkedIn.<br/>
+          <em style={{ color: a.glow }}>Vamos ler como um estrategista.</em>
         </h1>
         <p className="connect-sub">
-          Export your profile from LinkedIn (More → Save as PDF), then drop it here.
-          Lattice scans 18 signals across positioning, cadence, and conviction. Nothing is published.
+          Exporte seu perfil do LinkedIn (Mais → Salvar como PDF) e envie aqui.
+          O Lattice analisa 18 sinais — posicionamento, cadência, convicção. Nada é publicado.
         </p>
 
         {stage === "idle" && (
@@ -329,19 +353,19 @@ function ConnectScreen({ onComplete, accent }) {
               {file ? (
                 <>
                   <p style={{color: a.glow, fontWeight: 500, fontSize: '13px', marginBottom: '4px'}}>{file.name}</p>
-                  <Mono style={{color: 'oklch(0.50 0.02 270)', fontSize: '11px'}}>{(file.size / 1024).toFixed(0)} KB · click to swap</Mono>
+                  <Mono style={{color: 'oklch(0.50 0.02 270)', fontSize: '11px'}}>{(file.size / 1024).toFixed(0)} KB · clique para trocar</Mono>
                 </>
               ) : (
                 <>
-                  <p style={{fontWeight: 500, fontSize: '13px', marginBottom: '4px', color: 'oklch(0.85 0.01 270)'}}>Drop LinkedIn PDF here</p>
-                  <Mono style={{color: 'oklch(0.50 0.02 270)', fontSize: '11px'}}>or click to select</Mono>
+                  <p style={{fontWeight: 500, fontSize: '13px', marginBottom: '4px', color: 'oklch(0.85 0.01 270)'}}>Arraste o PDF do LinkedIn aqui</p>
+                  <Mono style={{color: 'oklch(0.50 0.02 270)', fontSize: '11px'}}>ou clique para selecionar</Mono>
                 </>
               )}
             </div>
             {errMsg && <Mono style={{color: 'oklch(0.65 0.18 28)', fontSize: '12px'}}>{errMsg}</Mono>}
             <button className="btn-primary lg" disabled={!file} onClick={handleScan}
               style={{opacity: file ? 1 : 0.38, cursor: file ? 'default' : 'not-allowed'}}>
-              <span>Begin scan</span>
+              <span>Iniciar análise</span>
               <Mono className="btn-kbd">⏎</Mono>
             </button>
           </div>
@@ -352,9 +376,9 @@ function ConnectScreen({ onComplete, accent }) {
           <div className="scan-meta">
             <Mono className="scan-phase">
               {stage === "scanning" ? phase
-                : stage === "done" ? "Diagnosis ready."
+                : stage === "done" ? "Diagnóstico pronto."
                 : stage === "error" ? errMsg
-                : "Awaiting PDF…"}
+                : "Aguardando PDF…"}
             </Mono>
             {progress > 0 && stage !== "idle" && (
               <Mono className="scan-pct" style={{ color: a.glow }}>{progress}%</Mono>
@@ -363,13 +387,13 @@ function ConnectScreen({ onComplete, accent }) {
         </div>
 
         {stage === "error" && (
-          <button className="btn-ghost sm" onClick={reset} style={{marginTop:'16px'}}>Try again</button>
+          <button className="btn-ghost sm" onClick={reset} style={{marginTop:'16px'}}>Tentar novamente</button>
         )}
 
         <div className="connect-footnotes">
-          <div><Mono>·</Mono><span>Read-only. We never post on your behalf.</span></div>
-          <div><Mono>·</Mono><span>LinkedIn: More → Save as PDF.</span></div>
-          <div><Mono>·</Mono><span>Analysis takes 10–20 seconds.</span></div>
+          <div><Mono>·</Mono><span>Somente leitura. Nunca publicamos em seu nome.</span></div>
+          <div><Mono>·</Mono><span>LinkedIn: Mais → Salvar como PDF.</span></div>
+          <div><Mono>·</Mono><span>A análise leva entre 10 e 20 segundos.</span></div>
         </div>
       </div>
     </div>
@@ -377,7 +401,7 @@ function ConnectScreen({ onComplete, accent }) {
 }
 
 function ScanVisual({ progress, accent }) {
-  const sections = ["Headline", "About", "Experience", "Skills", "Activity", "Network"];
+  const sections = ["Headline", "Resumo", "Experiência", "Habilidades", "Atividade", "Rede"];
   return (
     <div className="scan-visual">
       <div className="scan-sections">
@@ -403,7 +427,7 @@ function ScanVisual({ progress, accent }) {
 }
 
 // ============================================================
-// SCREEN: AUDIT
+// TELA: AUDITORIA
 // ============================================================
 function AuditScreen({ threads, onOpenThread, accent, scoreBreakdown, overallScore }) {
   const a = ACCENTS[accent];
@@ -416,23 +440,23 @@ function AuditScreen({ threads, onOpenThread, accent, scoreBreakdown, overallSco
       }))
     : [
         { k: "Headline", v: 92, threadId: "T01" },
-        { k: "About", v: 78, threadId: "T02" },
-        { k: "Experience", v: 84 },
-        { k: "Skills", v: 88 },
-        { k: "Activity", v: 71, threadId: "T05" },
-        { k: "Recommendations", v: 64 },
+        { k: "Resumo", v: 78, threadId: "T02" },
+        { k: "Experiência", v: 84 },
+        { k: "Habilidades", v: 88 },
+        { k: "Atividade", v: 71, threadId: "T05" },
+        { k: "Recomendações", v: 64 },
       ];
 
   return (
-    <div className="screen audit-screen" data-screen-label="Audit">
+    <div className="screen audit-screen" data-screen-label="Auditoria">
       <div className="screen-head">
         <div>
-          <Mono className="eyebrow">step 02 · diagnosis</Mono>
-          <h1>Your presence, read like a pulse.</h1>
+          <Mono className="eyebrow">passo 02 · diagnóstico</Mono>
+          <h1>Sua presença, lida como um pulso.</h1>
         </div>
         <p className="screen-lede">
-          Each weak signal becomes a <em>thread</em> — pick one up, the workshop opens.
-          Threads stay with you across the app until resolved.
+          Cada sinal fraco vira uma <em>pendência</em> — escolha uma, o workshop abre.
+          As pendências permanecem visíveis em todo o app até serem resolvidas.
         </p>
       </div>
 
@@ -440,14 +464,14 @@ function AuditScreen({ threads, onOpenThread, accent, scoreBreakdown, overallSco
         <div className="pulse-stage">
           <Pulse accent={a} threads={threads} onOpen={onOpenThread} />
           <div className="pulse-axis">
-            {["clarity","conviction","cadence","craft","candor"].map(t => (
+            {["clareza","convicção","cadência","qualidade","autenticidade"].map(t => (
               <Mono key={t}>{t}</Mono>
             ))}
           </div>
         </div>
 
         <div className="audit-grades">
-          <Mono className="grades-eyebrow">section breakdown</Mono>
+          <Mono className="grades-eyebrow">análise por seção</Mono>
           {sections.map((s, i) => {
             const thread = s.threadId && threads.find(t => t.id === s.threadId);
             const isOpen = thread && !thread.resolved;
@@ -458,7 +482,7 @@ function AuditScreen({ threads, onOpenThread, accent, scoreBreakdown, overallSco
                   {isOpen && (
                     <button className="grade-thread-chip" onClick={() => onOpenThread(thread)}>
                       <span className="chip-num">{thread.n}</span>
-                      <span>open thread</span>
+                      <span>ver pendência</span>
                     </button>
                   )}
                   <Mono className="grade-v">{s.v}</Mono>
@@ -539,7 +563,7 @@ function Pulse({ accent, threads, onOpen }) {
 }
 
 // ============================================================
-// SCREEN: BRAND STUDIO
+// TELA: BRAND STUDIO
 // ============================================================
 function BrandStudio({ threads, activeThreadId, onResolve, onPickThread, accent, profileId }) {
   const a = ACCENTS[accent];
@@ -550,12 +574,12 @@ function BrandStudio({ threads, activeThreadId, onResolve, onPickThread, accent,
     <div className="screen brand-screen" data-screen-label="Brand Studio">
       <div className="screen-head">
         <div>
-          <Mono className="eyebrow">step 03 · workshop</Mono>
-          <h1>Pick up a thread.<br/><em style={{color: a.glow}}>Resolve it with the copilot.</em></h1>
+          <Mono className="eyebrow">passo 03 · workshop</Mono>
+          <h1>Escolha uma pendência.<br/><em style={{color: a.glow}}>Resolva com o copiloto.</em></h1>
         </div>
         <p className="screen-lede">
-          The thread on the left names the problem. The workshop on the right proposes
-          rewrites. Accept one — your score moves in real time.
+          A pendência à esquerda nomeia o problema. O workshop à direita propõe
+          reescritas. Aceite uma — sua pontuação sobe em tempo real.
         </p>
       </div>
 
@@ -572,12 +596,12 @@ function BrandStudio({ threads, activeThreadId, onResolve, onPickThread, accent,
                 <span className="pick-title">{t.title}</span>
               </div>
               {t.resolved
-                ? <Mono className="pick-state done">resolved</Mono>
+                ? <Mono className="pick-state done">resolvida</Mono>
                 : <Mono className="pick-state" style={{color: a.glow}}>+{t.lift}</Mono>}
             </button>
           )) : (
             <div style={{padding:'16px', color:'oklch(0.50 0.02 270)'}}>
-              <Mono>No brand threads. Upload a PDF to generate.</Mono>
+              <Mono>Nenhuma pendência de marca. Envie um PDF para gerar.</Mono>
             </div>
           )}
         </div>
@@ -585,7 +609,7 @@ function BrandStudio({ threads, activeThreadId, onResolve, onPickThread, accent,
         <div className="workshop">
           {active
             ? <Workshop thread={active} accent={a} onResolve={onResolve} profileId={profileId} />
-            : <div className="workshop-empty"><Mono>Select a thread.</Mono></div>
+            : <div className="workshop-empty"><Mono>Selecione uma pendência.</Mono></div>
           }
         </div>
       </div>
@@ -597,7 +621,7 @@ function Workshop({ thread, accent, onResolve, profileId }) {
   if (thread.target === "headline") return <HeadlineWorkshop thread={thread} accent={accent} onResolve={onResolve} profileId={profileId} />;
   if (thread.target === "bio")      return <BioWorkshop thread={thread} accent={accent} onResolve={onResolve} profileId={profileId} />;
   if (thread.target === "banner")   return <BannerWorkshop thread={thread} accent={accent} onResolve={onResolve} profileId={profileId} />;
-  return <div className="workshop-empty"><Mono>Select a thread.</Mono></div>;
+  return <BioWorkshop thread={thread} accent={accent} onResolve={onResolve} profileId={profileId} />;
 }
 
 function HeadlineWorkshop({ thread, accent, onResolve, profileId }) {
@@ -607,7 +631,7 @@ function HeadlineWorkshop({ thread, accent, onResolve, profileId }) {
   const [error, setError] = useState('');
 
   const generate = async () => {
-    if (!profileId) { setError('No profile loaded'); return; }
+    if (!profileId) { setError('Nenhum perfil carregado'); return; }
     setLoading(true);
     setError('');
     try {
@@ -633,9 +657,9 @@ function HeadlineWorkshop({ thread, accent, onResolve, profileId }) {
 
       <div className="ws-section">
         <div className="ws-section-head">
-          <Mono className="ws-section-lbl">{alts.length > 0 ? `alternates · ${alts.length}` : 'alternates'}</Mono>
+          <Mono className="ws-section-lbl">{alts.length > 0 ? `alternativas · ${alts.length}` : 'alternativas'}</Mono>
           <button className="btn-ghost sm" onClick={generate} disabled={loading}>
-            {loading ? 'Generating…' : alts.length > 0 ? 'Regenerate' : 'Generate with AI'}
+            {loading ? 'Gerando…' : alts.length > 0 ? 'Gerar novamente' : 'Gerar com IA'}
           </button>
         </div>
         {error && <Mono style={{color:'oklch(0.65 0.18 28)',fontSize:'12px',marginTop:'8px'}}>{error}</Mono>}
@@ -651,7 +675,7 @@ function HeadlineWorkshop({ thread, accent, onResolve, profileId }) {
                   className="btn-ghost sm"
                   style={{flexShrink:0,fontSize:'11px'}}
                   onClick={e => { e.stopPropagation(); navigator.clipboard.writeText(alt.txt); }}
-                >Copy</button>
+                >Copiar</button>
               </button>
             ))}
           </div>
@@ -659,9 +683,9 @@ function HeadlineWorkshop({ thread, accent, onResolve, profileId }) {
       </div>
 
       <div className="ws-foot">
-        <button className="btn-ghost">Discard thread</button>
-        <button className="btn-primary" disabled={(!picked && alts.length > 0) || thread.resolved} onClick={() => onResolve(thread.id)}>
-          {thread.resolved ? "Resolved" : `Apply & resolve · +${thread.lift}`}
+        <button className="btn-ghost">Descartar pendência</button>
+        <button className="btn-primary" disabled={alts.length === 0 || thread.resolved} onClick={() => onResolve(thread.id)}>
+          {thread.resolved ? "Resolvida" : `Aplicar e resolver · +${thread.lift}`}
           {!thread.resolved && <Mono className="btn-kbd">⌘ ⏎</Mono>}
         </button>
       </div>
@@ -676,7 +700,7 @@ function BioWorkshop({ thread, accent, onResolve, profileId }) {
   const [error, setError] = useState('');
 
   const generate = async () => {
-    if (!profileId) { setError('No profile loaded'); return; }
+    if (!profileId) { setError('Nenhum perfil carregado'); return; }
     setLoading(true);
     setError('');
     try {
@@ -703,7 +727,7 @@ function BioWorkshop({ thread, accent, onResolve, profileId }) {
       </div>
       <div className="ws-section">
         <div className="ws-section-head">
-          <Mono className="ws-section-lbl">{drafts.length > 0 ? `draft ${draft+1} of ${drafts.length}` : 'drafts'}</Mono>
+          <Mono className="ws-section-lbl">{drafts.length > 0 ? `rascunho ${draft+1} de ${drafts.length}` : 'rascunhos'}</Mono>
           <div style={{display:'flex',gap:'6px',alignItems:'center'}}>
             {drafts.length > 0 && (
               <>
@@ -712,7 +736,7 @@ function BioWorkshop({ thread, accent, onResolve, profileId }) {
               </>
             )}
             <button className="btn-ghost sm" onClick={generate} disabled={loading}>
-              {loading ? 'Generating…' : drafts.length > 0 ? 'Regenerate' : 'Generate with AI'}
+              {loading ? 'Gerando…' : drafts.length > 0 ? 'Gerar novamente' : 'Gerar com IA'}
             </button>
           </div>
         </div>
@@ -721,15 +745,17 @@ function BioWorkshop({ thread, accent, onResolve, profileId }) {
           <div className="bio-card">
             <p className="bio-text">{current}</p>
             <div className="bio-meta">
-              <Mono>{current.split(" ").length} words</Mono>
+              <Mono>{current.split(" ").length} palavras</Mono>
             </div>
           </div>
         )}
       </div>
       <div className="ws-foot">
-        <button className="btn-ghost" onClick={() => current && navigator.clipboard.writeText(current)} disabled={!current}>Copy</button>
+        <button className="btn-ghost" onClick={() => current && navigator.clipboard.writeText(current)} disabled={!current}>
+          Copiar
+        </button>
         <button className="btn-primary" disabled={thread.resolved || drafts.length === 0} onClick={() => onResolve(thread.id)}>
-          {thread.resolved ? "Resolved" : `Apply draft · +${thread.lift}`}
+          {thread.resolved ? "Resolvida" : `Aplicar rascunho · +${thread.lift}`}
         </button>
       </div>
     </div>
@@ -742,7 +768,7 @@ function BannerWorkshop({ thread, accent, onResolve, profileId }) {
   const [error, setError] = useState('');
 
   const generate = async () => {
-    if (!profileId) { setError('No profile loaded'); return; }
+    if (!profileId) { setError('Nenhum perfil carregado'); return; }
     setLoading(true);
     setError('');
     try {
@@ -765,27 +791,30 @@ function BannerWorkshop({ thread, accent, onResolve, profileId }) {
         </div>
       </div>
       {bannerUrl ? (
-        <img src={bannerUrl} alt="LinkedIn Banner" style={{width:'100%',borderRadius:'8px',border:'1px solid oklch(0.28 0.02 270)',marginBottom:'12px'}} />
+        <img src={bannerUrl} alt="Banner LinkedIn" style={{width:'100%',borderRadius:'8px',border:'1px solid oklch(0.28 0.02 270)',marginBottom:'12px'}} />
       ) : (
         <div className="banner-large" style={{
           background: `linear-gradient(120deg, oklch(0.18 0.02 270), ${accent.deep} 60%, oklch(0.18 0.02 270))`,
-          display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:'8px'
+          display:'flex',alignItems:'center',justifyContent:'center',
         }}>
-          {loading ? <Mono>Generating banner…</Mono> : <Mono style={{color:'oklch(0.50 0.02 270)'}}>1584 × 396</Mono>}
+          <Mono style={{color: loading ? accent.glow : 'oklch(0.50 0.02 270)'}}>
+            {loading ? 'Gerando banner…' : '1584 × 396'}
+          </Mono>
         </div>
       )}
-      {error && <Mono style={{color:'oklch(0.65 0.18 28)',fontSize:'12px'}}>{error}</Mono>}
+      {error && <Mono style={{color:'oklch(0.65 0.18 28)',fontSize:'12px',marginBottom:'8px'}}>{error}</Mono>}
       <div className="ws-foot">
         <button className="btn-ghost" onClick={generate} disabled={loading}>
-          {loading ? 'Generating…' : bannerUrl ? 'Regenerate' : 'Generate with AI'}
+          {loading ? 'Gerando…' : bannerUrl ? 'Gerar novamente' : 'Gerar com IA'}
         </button>
         {bannerUrl && (
-          <a href={bannerUrl} download="banner-linkedin.svg" className="btn-ghost" style={{textDecoration:'none',display:'inline-flex',alignItems:'center'}}>
-            Download
+          <a href={bannerUrl} download="banner-linkedin.svg"
+            className="btn-ghost" style={{textDecoration:'none',display:'inline-flex',alignItems:'center'}}>
+            Baixar
           </a>
         )}
         <button className="btn-primary" disabled={thread.resolved || !bannerUrl} onClick={() => onResolve(thread.id)}>
-          {thread.resolved ? "Resolved" : `Apply · +${thread.lift}`}
+          {thread.resolved ? "Resolvida" : `Aplicar · +${thread.lift}`}
         </button>
       </div>
     </div>
@@ -793,7 +822,7 @@ function BannerWorkshop({ thread, accent, onResolve, profileId }) {
 }
 
 // ============================================================
-// SCREEN: OUTREACH
+// TELA: OUTREACH
 // ============================================================
 function OutreachScreen({ threads, activeThreadId, onResolve, onPickThread, accent, profileId }) {
   const a = ACCENTS[accent];
@@ -804,18 +833,19 @@ function OutreachScreen({ threads, activeThreadId, onResolve, onPickThread, acce
     <div className="screen outreach-screen" data-screen-label="Outreach">
       <div className="screen-head">
         <div>
-          <Mono className="eyebrow">step 04 · outreach</Mono>
-          <h1>A strategist, on call.</h1>
+          <Mono className="eyebrow">passo 04 · outreach</Mono>
+          <h1>Um estrategista, à disposição.</h1>
         </div>
         <p className="screen-lede">
-          Every outbound message is a small bet. Lattice drafts it with you.
+          Cada mensagem enviada é uma aposta. O Lattice ajuda a calibrar a aposta certa
+          e redige por você.
         </p>
       </div>
 
       <div className="outreach-grid">
         <div className="targets">
-          <Mono className="targets-lbl">threads</Mono>
-          {localThreads.length > 0 ? localThreads.map((t, i) => (
+          <Mono className="targets-lbl">pendências</Mono>
+          {localThreads.length > 0 ? localThreads.map((t) => (
             <button key={t.id} className={`target ${active && active.id === t.id ? "on" : ""}`}
               onClick={() => onPickThread(t.id)}>
               <div className="target-avatar">{t.n}</div>
@@ -828,7 +858,7 @@ function OutreachScreen({ threads, activeThreadId, onResolve, onPickThread, acce
             </button>
           )) : (
             <div style={{padding:'16px', color:'oklch(0.50 0.02 270)'}}>
-              <Mono>No outreach threads. Upload a PDF to generate.</Mono>
+              <Mono>Nenhuma pendência de contato. Envie um PDF para gerar.</Mono>
             </div>
           )}
         </div>
@@ -848,8 +878,8 @@ function Conversation({ thread, accent, onResolve, profileId }) {
   const [error, setError] = useState('');
 
   const generate = async () => {
-    if (!profileId) { setError('No profile loaded'); return; }
-    if (!signal.trim()) { setError('Enter a context signal first'); return; }
+    if (!profileId) { setError('Nenhum perfil carregado'); return; }
+    if (!signal.trim()) { setError('Insira um sinal de contexto primeiro'); return; }
     setLoading(true);
     setError('');
     try {
@@ -866,24 +896,24 @@ function Conversation({ thread, accent, onResolve, profileId }) {
     <>
       <div className="convo-head">
         <Mono>{thread.area} · {thread.n}</Mono>
-        <Mono className="convo-thread">outreach thread</Mono>
+        <Mono className="convo-thread">pendência de contato</Mono>
       </div>
       <div className="convo-body">
         <div className="msg from-ai">
-          <Mono className="who">strategist</Mono>
+          <Mono className="who">estrategista</Mono>
           <p>{thread.note || thread.title}</p>
         </div>
         {pitches.length === 0 && (
           <div className="msg from-ai">
-            <Mono className="who">strategist</Mono>
-            <p>Provide a context signal — a post they published, a role change, a shared connection — and I'll draft three openers, ranged warm to direct.</p>
+            <Mono className="who">estrategista</Mono>
+            <p>Forneça um sinal de contexto — um post que publicaram, uma mudança de cargo, uma conexão em comum — e eu rascunho três openers: do mais caloroso ao mais direto.</p>
           </div>
         )}
         {pitches.map((p, i) => (
           <div key={i} className="draft-card">
             <div className="draft-head">
-              <Mono>draft · v{i+1}</Mono>
-              <button className="btn-ghost sm" style={{fontSize:'11px'}} onClick={() => navigator.clipboard.writeText(p)}>Copy</button>
+              <Mono>rascunho · v{i+1}</Mono>
+              <button className="btn-ghost sm" style={{fontSize:'11px'}} onClick={() => navigator.clipboard.writeText(p)}>Copiar</button>
             </div>
             <p className="draft-text">{p}</p>
           </div>
@@ -894,17 +924,17 @@ function Conversation({ thread, accent, onResolve, profileId }) {
         <input
           value={signal}
           onChange={e => setSignal(e.target.value)}
-          placeholder="Context signal: post, role change, shared connection…"
+          placeholder="Sinal de contexto: post, mudança de cargo, conexão em comum…"
           onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) generate(); }}
         />
         <Mono className="kbd">⌘ ⏎</Mono>
         <button className="btn-primary sm" onClick={generate} disabled={loading || !signal.trim()}>
-          {loading ? '…' : pitches.length > 0 ? 'Regenerate' : 'Draft'}
+          {loading ? '…' : pitches.length > 0 ? 'Gerar novamente' : 'Gerar'}
         </button>
         {pitches.length > 0 && (
           <button className="btn-primary sm" disabled={thread.resolved} onClick={() => onResolve(thread.id)}
             style={{marginLeft:'6px'}}>
-            {thread.resolved ? "Resolved" : `Resolve · +${thread.lift}`}
+            {thread.resolved ? "Resolvida" : `Resolver · +${thread.lift}`}
           </button>
         )}
       </div>
@@ -913,7 +943,7 @@ function Conversation({ thread, accent, onResolve, profileId }) {
 }
 
 // ============================================================
-// ROOT APP
+// APP RAIZ
 // ============================================================
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
@@ -957,16 +987,11 @@ function App() {
   };
 
   const copilotCtx = useMemo(() => {
-    if (screen === "connect") return [{ kind: "info", text: "Export your LinkedIn profile as PDF (More → Save as PDF), then upload it here. I'll read it like a hiring strategist would." }];
-    if (screen === "audit")   return [
-      { kind: "info", text: `${threads.filter(t => !t.resolved).length} threads opened. Start with the highest-severity ones.` },
-    ];
-    if (screen === "brand")   return [
-      { kind: "info", text: "Headlines are the highest-leverage edit. Generate options, pick the one that sounds like you at your best." }
-    ];
-    if (screen === "outreach") return [
-      { kind: "info", text: "Specificity beats warmth. Name what you actually noticed about them." },
-    ];
+    const open = threads.filter(t => !t.resolved).length;
+    if (screen === "connect") return [{ kind: "info", text: "Exporte seu perfil do LinkedIn como PDF (Mais → Salvar como PDF) e envie aqui. Vou ler como um recrutador sênior leria." }];
+    if (screen === "audit")   return [{ kind: "info", text: `${open} pendência${open !== 1 ? 's' : ''} aberta${open !== 1 ? 's' : ''}. Comece pelas de maior severidade — impacto maior, mais rápido.` }];
+    if (screen === "brand")   return [{ kind: "info", text: "Headline é a edição de maior retorno. Gere as alternativas, escolha a que soa como você no seu melhor momento." }];
+    if (screen === "outreach") return [{ kind: "info", text: "Especificidade bate cordialidade. Cite algo concreto que você observou na pessoa." }];
     return [];
   }, [screen, threads]);
 
@@ -1015,21 +1040,21 @@ function App() {
         )}
       </div>
 
-      <TweaksPanel title="Tweaks">
-        <TweakSection title="Accent">
+      <TweaksPanel title="Ajustes">
+        <TweakSection title="Cor">
           <TweakRadio
             value={t.accent}
             onChange={v => setTweak("accent", v)}
             options={Object.entries(ACCENTS).map(([k,v]) => ({ value: k, label: v.name }))}
           />
         </TweakSection>
-        <TweakSection title="Atmosphere">
-          <TweakToggle label="Ambient gradient" value={t.showAmbient} onChange={v => setTweak("showAmbient", v)} />
-          <TweakToggle label="Film grain" value={t.showGrain} onChange={v => setTweak("showGrain", v)} />
-          <TweakToggle label="Copilot rail" value={t.showCopilot} onChange={v => setTweak("showCopilot", v)} />
+        <TweakSection title="Atmosfera">
+          <TweakToggle label="Gradiente ambiente" value={t.showAmbient} onChange={v => setTweak("showAmbient", v)} />
+          <TweakToggle label="Grão de filme" value={t.showGrain} onChange={v => setTweak("showGrain", v)} />
+          <TweakToggle label="Painel copiloto" value={t.showCopilot} onChange={v => setTweak("showCopilot", v)} />
         </TweakSection>
-        <TweakSection title="Session">
-          <TweakButton onClick={reset}>Reset session</TweakButton>
+        <TweakSection title="Sessão">
+          <TweakButton onClick={reset}>Reiniciar sessão</TweakButton>
         </TweakSection>
       </TweaksPanel>
     </>
