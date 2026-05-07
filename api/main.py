@@ -37,7 +37,21 @@ async def health():
 @app.get("/health/anthropic")
 async def health_anthropic():
     """Test live Anthropic API connectivity."""
+    import httpx
     import anthropic as _anthropic
+
+    # 1. Raw TCP/HTTPS test
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get("https://api.anthropic.com/v1/models",
+                                 headers={"x-api-key": settings.anthropic_api_key,
+                                          "anthropic-version": "2023-06-01"})
+            raw_status = r.status_code
+    except Exception as e:
+        raw_status = f"FAIL: {type(e).__name__}: {e}"
+
+    # 2. SDK test
+    sdk_result = None
     try:
         client = _anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
         msg = await client.messages.create(
@@ -45,6 +59,8 @@ async def health_anthropic():
             max_tokens=10,
             messages=[{"role": "user", "content": "ping"}],
         )
-        return {"status": "ok", "response": msg.content[0].text}
+        sdk_result = {"status": "ok", "response": msg.content[0].text}
     except Exception as e:
-        return {"status": "error", "detail": str(e), "type": type(e).__name__}
+        sdk_result = {"status": "error", "detail": str(e), "type": type(e).__name__}
+
+    return {"raw_http": raw_status, "sdk": sdk_result}
