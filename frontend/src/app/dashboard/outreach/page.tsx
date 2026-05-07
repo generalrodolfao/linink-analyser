@@ -1,150 +1,148 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Textarea } from '@/components/ui/textarea'
 import { generatePitch, generateApplicationEmail } from '@/lib/api'
+
+type Tab = 'pitch' | 'email'
 
 export default function OutreachPage() {
   const [profileId, setProfileId] = useState('')
+  const [tab, setTab] = useState<Tab>('pitch')
   const [signal, setSignal] = useState('')
   const [pitches, setPitches] = useState<string[]>([])
   const [jobDescription, setJobDescription] = useState('')
-  const [applicationEmail, setApplicationEmail] = useState('')
-  const [loading, setLoading] = useState<Record<string, boolean>>({})
+  const [emailResult, setEmailResult] = useState('')
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  function setLoad(key: string, val: boolean) {
-    setLoading((prev) => ({ ...prev, [key]: val }))
-  }
+  async function generate() {
+    if (!profileId.trim()) { setError('Insira um Profile ID'); return }
+    if (tab === 'pitch' && !signal.trim()) { setError('Insira um sinal de contexto'); return }
+    if (tab === 'email' && !jobDescription.trim()) { setError('Insira a descrição da vaga'); return }
 
-  function copy(text: string) { navigator.clipboard.writeText(text) }
-
-  async function handlePitch() {
-    if (!profileId.trim() || !signal.trim()) { setError('Preencha o Profile ID e o sinal'); return }
-    setLoad('pitch', true); setError(null)
+    setLoading(true)
+    setError(null)
     try {
-      const data = await generatePitch(profileId, signal) as { pitches: string[] }
-      setPitches(data.pitches)
+      if (tab === 'pitch') {
+        const data = await generatePitch(profileId, signal) as { pitches: string[] }
+        setPitches(data.pitches)
+      } else {
+        const data = await generateApplicationEmail(profileId, jobDescription) as { email: string }
+        setEmailResult(data.email)
+      }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erro ao gerar pitch')
+      setError(e instanceof Error ? e.message : 'Erro ao gerar')
     } finally {
-      setLoad('pitch', false)
-    }
-  }
-
-  async function handleEmail() {
-    if (!profileId.trim() || !jobDescription.trim()) { setError('Preencha o Profile ID e a descrição da vaga'); return }
-    setLoad('email', true); setError(null)
-    try {
-      const data = await generateApplicationEmail(profileId, jobDescription) as { email: string }
-      setApplicationEmail(data.email)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erro ao gerar e-mail')
-    } finally {
-      setLoad('email', false)
+      setLoading(false)
     }
   }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Outreach</h1>
-        <p className="text-muted-foreground text-sm mt-1">Pitches e e-mails de candidatura personalizados</p>
+    <div className="space-y-10">
+      <div className="space-y-1">
+        <h1 className="text-xl font-semibold text-foreground">Outreach</h1>
+        <p className="text-sm text-muted-foreground">Pitches e e-mails personalizados baseados em sinal de contexto.</p>
       </div>
 
-      <Card>
-        <CardContent className="pt-6 space-y-4">
+      <div className="max-w-lg space-y-6">
+        <div className="space-y-2">
+          <label className="text-xs text-muted-foreground">Profile ID</label>
+          <input
+            type="text"
+            value={profileId}
+            onChange={(e) => setProfileId(e.target.value)}
+            placeholder="UUID do perfil analisado"
+            className="w-full bg-muted border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+        </div>
+
+        <div className="flex gap-0.5 border-b border-border">
+          {(['pitch', 'email'] as Tab[]).map((id) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              className={`px-3 py-2 text-sm transition-colors border-b-2 -mb-px ${
+                tab === id
+                  ? 'border-primary text-foreground font-medium'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {id === 'pitch' ? 'Signal Pitch' : 'E-mail'}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'pitch' ? (
           <div className="space-y-2">
-            <Label>Profile ID</Label>
-            <Input
-              placeholder="UUID do perfil analisado"
-              value={profileId}
-              onChange={(e) => setProfileId(e.target.value)}
+            <label className="text-xs text-muted-foreground">Sinal de contexto</label>
+            <input
+              type="text"
+              value={signal}
+              onChange={(e) => setSignal(e.target.value)}
+              placeholder="Ex: vi seu post sobre automação com IA..."
+              className="w-full bg-muted border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+            <p className="text-xs text-muted-foreground">Post, mudança de cargo, conquista publicada.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <label className="text-xs text-muted-foreground">Descrição da vaga</label>
+            <textarea
+              value={jobDescription}
+              onChange={(e) => setJobDescription(e.target.value)}
+              placeholder="Cole a descrição completa da vaga..."
+              rows={6}
+              className="w-full bg-muted border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
             />
           </div>
-          {error && <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">{error}</p>}
-        </CardContent>
-      </Card>
+        )}
 
-      <Tabs defaultValue="pitch">
-        <TabsList>
-          <TabsTrigger value="pitch">Signal-Based Pitch</TabsTrigger>
-          <TabsTrigger value="email">E-mail de Candidatura</TabsTrigger>
-        </TabsList>
+        {error && (
+          <p className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-md px-3 py-2">{error}</p>
+        )}
 
-        <TabsContent value="pitch" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Pitch Baseado em Sinal</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Sinal de Contexto</Label>
-                <Input
-                  placeholder='Ex: "Vi seu post sobre automação de vendas com IA..."'
-                  value={signal}
-                  onChange={(e) => setSignal(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">Post, mudança de cargo, conquista — o contexto que justifica o contato.</p>
+        <button
+          onClick={generate}
+          disabled={loading}
+          className="bg-primary text-primary-foreground text-sm font-medium px-4 py-2 rounded-md hover:opacity-90 disabled:opacity-40 transition-opacity"
+        >
+          {loading ? 'Gerando...' : 'Gerar'}
+        </button>
+      </div>
+
+      {tab === 'pitch' && pitches.length > 0 && (
+        <div className="max-w-2xl space-y-3">
+          {pitches.map((p, i) => (
+            <div key={i} className="flex items-start justify-between gap-4 p-4 rounded-lg border border-border bg-card">
+              <div className="space-y-1.5">
+                <span className="text-xs text-muted-foreground font-medium">Variação {i + 1}</span>
+                <p className="text-sm text-foreground leading-relaxed">{p}</p>
               </div>
-              <Button onClick={handlePitch} disabled={loading.pitch}>
-                {loading.pitch ? 'Gerando...' : 'Gerar Pitches'}
-              </Button>
-              {pitches.length > 0 && (
-                <div className="space-y-3">
-                  {pitches.map((p, i) => (
-                    <div key={i} className="p-4 bg-muted rounded-lg border border-border space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-muted-foreground font-medium">Variação {i + 1}</span>
-                        <Button size="sm" variant="outline" onClick={() => copy(p)}>Copiar</Button>
-                      </div>
-                      <p className="text-foreground text-sm">{p}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+              <button
+                onClick={() => navigator.clipboard.writeText(p)}
+                className="shrink-0 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Copiar
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
-        <TabsContent value="email" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>E-mail de Candidatura</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Descrição da Vaga</Label>
-                <Textarea
-                  placeholder="Cole aqui a descrição completa da vaga..."
-                  value={jobDescription}
-                  onChange={(e) => setJobDescription(e.target.value)}
-                  rows={6}
-                />
-              </div>
-              <Button onClick={handleEmail} disabled={loading.email}>
-                {loading.email ? 'Gerando...' : 'Gerar E-mail'}
-              </Button>
-              {applicationEmail && (
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <Label>E-mail Gerado</Label>
-                    <Button size="sm" variant="outline" onClick={() => copy(applicationEmail)}>Copiar</Button>
-                  </div>
-                  <div className="p-4 bg-muted rounded-lg border border-border">
-                    <p className="text-foreground text-sm whitespace-pre-wrap">{applicationEmail}</p>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      {tab === 'email' && emailResult && (
+        <div className="max-w-2xl rounded-lg border border-border bg-card p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground font-medium">E-mail gerado</span>
+            <button
+              onClick={() => navigator.clipboard.writeText(emailResult)}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Copiar
+            </button>
+          </div>
+          <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{emailResult}</p>
+        </div>
+      )}
     </div>
   )
 }

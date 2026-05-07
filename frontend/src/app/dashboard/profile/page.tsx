@@ -1,18 +1,9 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
 import type { ScoreBreakdown } from '@/types'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-
-function scoreColor(pct: number) {
-  if (pct >= 80) return 'text-green-400'
-  if (pct >= 60) return 'text-yellow-400'
-  return 'text-red-400'
-}
 
 type Step = 'form' | 'analyzing' | 'done' | 'error'
 
@@ -24,6 +15,19 @@ interface Analysis {
   score_breakdown: ScoreBreakdown[]
 }
 
+function ScoreBar({ value, max }: { value: number; max: number }) {
+  const pct = Math.round((value / max) * 100)
+  const color = pct >= 80 ? 'bg-emerald-500' : pct >= 60 ? 'bg-amber-500' : 'bg-red-500'
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
+        <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className="text-xs tabular-nums text-muted-foreground w-8 text-right">{value}/{max}</span>
+    </div>
+  )
+}
+
 export default function ProfilePage() {
   const [pdfFile, setPdfFile] = useState<File | null>(null)
   const [dragging, setDragging] = useState(false)
@@ -32,9 +36,9 @@ export default function ProfilePage() {
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  function handleFileDrop(file: File) {
+  function handleFile(file: File) {
     if (!file.name.toLowerCase().endsWith('.pdf')) {
-      setError('Envie somente arquivos .pdf')
+      setError('Apenas arquivos .pdf são aceitos')
       return
     }
     setError(null)
@@ -50,10 +54,7 @@ export default function ProfilePage() {
     form.append('pdf_file', pdfFile)
 
     try {
-      const res = await fetch(`${API}/profile/analyze-pdf`, {
-        method: 'POST',
-        body: form,
-      })
+      const res = await fetch(`${API}/profile/analyze-pdf`, { method: 'POST', body: form })
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: 'Erro desconhecido' }))
         throw new Error(err.detail || 'Erro na análise')
@@ -73,178 +74,158 @@ export default function ProfilePage() {
     }
   }
 
-  // -------- ANALYZING --------
+  function reset() {
+    setStep('form')
+    setPdfFile(null)
+    setAnalysis(null)
+    setError(null)
+  }
+
   if (step === 'analyzing') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 text-center">
-        <div className="text-5xl animate-spin">🤖</div>
-        <h2 className="text-2xl font-bold text-foreground">Analisando seu perfil com IA...</h2>
-        <p className="text-muted-foreground max-w-sm">Isso leva cerca de 20–30 segundos. Não feche esta página.</p>
-        <Progress value={null} className="w-64" />
+      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
+        <div className="w-5 h-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+        <p className="text-sm text-muted-foreground">Analisando perfil...</p>
       </div>
     )
   }
 
-  // -------- DONE --------
   if (step === 'done' && analysis) {
+    const scoreColor = analysis.overall_score >= 80 ? 'text-emerald-400' : analysis.overall_score >= 60 ? 'text-amber-400' : 'text-red-400'
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            {analysis.full_name ? `Análise de ${analysis.full_name}` : 'Análise de Perfil'}
+      <div className="space-y-10">
+        <div className="space-y-1">
+          <h1 className="text-xl font-semibold text-foreground">
+            {analysis.full_name ?? 'Análise de Perfil'}
           </h1>
-          {analysis.headline && <p className="text-muted-foreground text-sm mt-1">{analysis.headline}</p>}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="flex flex-col items-center justify-center p-8 text-center">
-            <p className="text-muted-foreground text-sm mb-2">Score Geral</p>
-            <p className={`text-6xl font-bold ${scoreColor(analysis.overall_score)}`}>
-              {analysis.overall_score}
-            </p>
-            <p className="text-muted-foreground text-sm mt-1">/ 100</p>
-            <div className="w-full mt-4">
-              <Progress value={analysis.overall_score} />
-            </div>
-          </Card>
-
-          {analysis.score_breakdown.length > 0 && (
-            <Card className="md:col-span-2">
-              <CardHeader><CardTitle>Detalhes por Seção</CardTitle></CardHeader>
-              <CardContent className="space-y-5">
-                {analysis.score_breakdown.map((item: ScoreBreakdown) => {
-                  const pct = Math.round((item.score / item.max_score) * 100)
-                  return (
-                    <div key={item.category} className="space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span className="font-medium capitalize">{item.category}</span>
-                        <span className={scoreColor(pct)}>{item.score}/{item.max_score}</span>
-                      </div>
-                      <Progress value={pct} />
-                      {item.suggestions.map((s, i) => (
-                        <p key={i} className="text-xs text-muted-foreground flex gap-1.5">
-                          <span className="text-amber-400 shrink-0">→</span>{s}
-                        </p>
-                      ))}
-                    </div>
-                  )
-                })}
-              </CardContent>
-            </Card>
+          {analysis.headline && (
+            <p className="text-sm text-muted-foreground">{analysis.headline}</p>
           )}
         </div>
 
-        <Card>
-          <CardContent className="pt-4 text-sm text-muted-foreground space-y-2">
-            <p>
-              Profile ID (use nas abas Branding e Outreach):{' '}
-              <code
-                className="bg-muted px-1.5 py-0.5 rounded cursor-pointer hover:bg-muted/80 text-xs font-mono"
-                onClick={() => navigator.clipboard.writeText(analysis.profile_id)}
-                title="Clique para copiar"
-              >
-                {analysis.profile_id}
-              </code>
+        <div className="flex items-start gap-12">
+          <div className="shrink-0 space-y-1">
+            <p className="text-xs text-muted-foreground uppercase tracking-widest">Score</p>
+            <p className={`text-7xl font-bold tabular-nums leading-none ${scoreColor}`}>
+              {analysis.overall_score}
             </p>
-            <Button variant="outline" size="sm" onClick={() => { setStep('form'); setPdfFile(null); setAnalysis(null) }}>
-              Analisar outro perfil
-            </Button>
-          </CardContent>
-        </Card>
+            <p className="text-xs text-muted-foreground">de 100</p>
+          </div>
+
+          {analysis.score_breakdown.length > 0 && (
+            <div className="flex-1 space-y-4 pt-1">
+              {analysis.score_breakdown.map((item) => (
+                <div key={item.category} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-foreground capitalize">{item.category}</span>
+                  </div>
+                  <ScoreBar value={item.score} max={item.max_score} />
+                  {item.suggestions.length > 0 && (
+                    <ul className="space-y-0.5">
+                      {item.suggestions.map((s, i) => (
+                        <li key={i} className="text-xs text-muted-foreground flex gap-2">
+                          <span className="shrink-0 text-border">—</span>
+                          {s}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="pt-4 border-t border-border flex items-center justify-between">
+          <div className="space-y-0.5">
+            <p className="text-xs text-muted-foreground">Profile ID</p>
+            <button
+              onClick={() => navigator.clipboard.writeText(analysis.profile_id)}
+              className="text-xs font-mono text-foreground hover:text-primary transition-colors"
+              title="Clique para copiar"
+            >
+              {analysis.profile_id}
+            </button>
+          </div>
+          <button
+            onClick={reset}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Analisar outro perfil
+          </button>
+        </div>
       </div>
     )
   }
 
-  // -------- FORM --------
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Auditoria de Perfil</h1>
-        <p className="text-muted-foreground text-sm">Análise completa com IA em 10 critérios</p>
+    <div className="space-y-10">
+      <div className="space-y-1">
+        <h1 className="text-xl font-semibold text-foreground">Auditoria de Perfil</h1>
+        <p className="text-sm text-muted-foreground">
+          Exporte seu perfil do LinkedIn como PDF e faça o upload para análise.
+        </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Envie o PDF do seu LinkedIn</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          <div className="bg-muted border border-border rounded-lg p-4 text-sm text-muted-foreground space-y-1">
-            <p className="font-medium text-foreground">Como exportar o PDF do LinkedIn:</p>
-            <ol className="list-decimal list-inside space-y-0.5">
-              <li>Abra seu perfil no LinkedIn</li>
-              <li>Clique em <strong>Mais</strong> → <strong>Salvar como PDF</strong></li>
-              <li>Faça o upload do arquivo abaixo</li>
-            </ol>
-          </div>
+      <div className="space-y-6 max-w-lg">
+        <div
+          onClick={() => inputRef.current?.click()}
+          onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault()
+            setDragging(false)
+            const file = e.dataTransfer.files[0]
+            if (file) handleFile(file)
+          }}
+          className={`
+            cursor-pointer rounded-lg border-2 border-dashed transition-colors p-12 flex flex-col items-center gap-3 text-center
+            ${dragging ? 'border-primary bg-primary/5' : pdfFile ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-border hover:border-border/80 hover:bg-muted/20'}
+          `}
+        >
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".pdf,application/pdf"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
+          />
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className={pdfFile ? 'text-emerald-400' : 'text-muted-foreground'}>
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <polyline points="14,2 14,8 20,8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          {pdfFile ? (
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium text-foreground">{pdfFile.name}</p>
+              <p className="text-xs text-muted-foreground">{(pdfFile.size / 1024).toFixed(0)} KB · clique para trocar</p>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground">Arraste o PDF aqui</p>
+              <p className="text-xs text-muted-foreground">ou clique para selecionar</p>
+            </div>
+          )}
+        </div>
 
-          <div
-            onClick={() => inputRef.current?.click()}
-            onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={(e) => {
-              e.preventDefault()
-              setDragging(false)
-              const file = e.dataTransfer.files[0]
-              if (file) handleFileDrop(file)
-            }}
-            className={`
-              relative cursor-pointer rounded-xl border-2 border-dashed p-10 text-center transition-colors
-              ${dragging ? 'border-blue-400 bg-blue-50' : 'border-slate-300 hover:border-blue-400 hover:bg-slate-50'}
-              ${pdfFile ? 'border-green-400 bg-green-50' : ''}
-            `}
-          >
-            <input
-              ref={inputRef}
-              type="file"
-              accept=".pdf,application/pdf"
-              className="hidden"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileDrop(f) }}
-            />
-            {pdfFile ? (
-              <div className="space-y-1">
-                <div className="text-3xl">✅</div>
-                <p className="font-medium text-green-700">{pdfFile.name}</p>
-                <p className="text-xs text-slate-400">{(pdfFile.size / 1024).toFixed(0)} KB · clique para trocar</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <div className="text-4xl">📄</div>
-                <p className="font-medium text-slate-700">Arraste o PDF aqui ou clique para selecionar</p>
-                <p className="text-xs text-slate-400">Somente arquivos .pdf do LinkedIn</p>
-              </div>
-            )}
-          </div>
+        {error && (
+          <p className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-md px-3 py-2">
+            {error}
+          </p>
+        )}
 
-          {error && <p className="text-sm text-red-600 bg-red-50 p-3 rounded-md">{error}</p>}
-
-          <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-1">
-            <p className="text-sm font-medium text-foreground">O que você recebe:</p>
-            <ul className="text-sm text-muted-foreground space-y-0.5">
-              <li>✓ Score 0–100 com avaliação em 10 critérios</li>
-              <li>✓ Sugestões de melhoria acionáveis por seção</li>
-              <li>✓ Profile ID para gerar headlines, bio e banner</li>
-            </ul>
-          </div>
-
-          <Button
+        <div className="space-y-3">
+          <button
             onClick={handleAnalyze}
             disabled={!pdfFile}
-            className="w-full bg-blue-600 hover:bg-blue-700"
-            size="lg"
+            className="w-full bg-primary text-primary-foreground text-sm font-medium py-2.5 rounded-md hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
           >
             Analisar Perfil
-          </Button>
-        </CardContent>
-      </Card>
-
-      {step === 'error' && (
-        <Card>
-          <CardContent className="pt-6 text-center space-y-4">
-            <p className="text-red-600">{error}</p>
-            <Button onClick={() => { setStep('form'); setError(null) }}>Tentar novamente</Button>
-          </CardContent>
-        </Card>
-      )}
+          </button>
+          <p className="text-xs text-muted-foreground text-center">
+            No LinkedIn: <strong className="text-foreground">Mais</strong> → <strong className="text-foreground">Salvar como PDF</strong>
+          </p>
+        </div>
+      </div>
     </div>
   )
 }

@@ -1,58 +1,32 @@
 import Link from 'next/link'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 
-const features = [
-  {
-    href: '/dashboard/profile',
-    icon: '📊',
-    title: 'Auditoria de Perfil',
-    description: 'Analise e pontue seu perfil do LinkedIn com base em 10 critérios.',
-    label: 'Analisar Perfil',
-  },
-  {
-    href: '/dashboard/branding',
-    icon: '✨',
-    title: 'Geração de Branding',
-    description: 'Gere headlines, bio e banner personalizados com I.A.',
-    label: 'Gerar Branding',
-    outline: true,
-  },
-  {
-    href: '/dashboard/outreach',
-    icon: '🎯',
-    title: 'Inteligência de Outreach',
-    description: 'Crie pitches e e-mails de candidatura personalizados.',
-    label: 'Gerar Outreach',
-    outline: true,
-  },
+const sections = [
+  { href: '/dashboard/profile', label: 'Perfil', desc: 'Análise completa com score e recomendações' },
+  { href: '/dashboard/branding', label: 'Branding', desc: 'Headlines, bio e banner gerados com IA' },
+  { href: '/dashboard/outreach', label: 'Outreach', desc: 'Pitches e e-mails personalizados' },
 ]
 
 export default function DashboardPage() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground text-sm">Seu copiloto de LinkedIn</p>
+    <div className="space-y-10">
+      <div className="space-y-1">
+        <h1 className="text-xl font-semibold text-foreground">Início</h1>
+        <p className="text-sm text-muted-foreground">Selecione uma seção para começar.</p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {features.map((f) => (
-          <Card key={f.href} className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <CardTitle>
-                <span className="mr-2">{f.icon}</span>
-                {f.title}
-              </CardTitle>
-              <CardDescription>{f.description}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Link href={f.href}>
-                <Button className="w-full" variant={f.outline ? 'outline' : 'default'}>
-                  {f.label}
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {sections.map(({ href, label, desc }) => (
+          <Link
+            key={href}
+            href={href}
+            className="group flex flex-col gap-3 p-5 rounded-lg border border-border bg-card hover:border-border/80 hover:bg-muted/30 transition-colors"
+          >
+            <p className="text-sm font-medium text-foreground">{label}</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">{desc}</p>
+            <svg className="text-muted-foreground group-hover:text-foreground transition-colors mt-auto" width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </Link>
         ))}
       </div>
     </div>

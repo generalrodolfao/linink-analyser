@@ -1,37 +1,28 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Badge } from '@/components/ui/badge'
 import { generateHeadlines, generateBio, generateBanner } from '@/lib/api'
 
-type Loading = Record<string, boolean>
+type Tab = 'headlines' | 'bio' | 'banner'
 
 export default function BrandingPage() {
   const [profileId, setProfileId] = useState('')
+  const [tab, setTab] = useState<Tab>('headlines')
   const [headlines, setHeadlines] = useState<string[]>([])
   const [bios, setBios] = useState<string[]>([])
   const [bannerUrl, setBannerUrl] = useState<string | null>(null)
-  const [loading, setLoading] = useState<Loading>({})
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  function setLoad(key: string, val: boolean) {
-    setLoading((prev) => ({ ...prev, [key]: val }))
-  }
-
-  async function handle(type: 'headlines' | 'bio' | 'banner') {
+  async function generate() {
     if (!profileId.trim()) { setError('Insira um Profile ID'); return }
-    setLoad(type, true)
+    setLoading(true)
     setError(null)
     try {
-      if (type === 'headlines') {
+      if (tab === 'headlines') {
         const data = await generateHeadlines(profileId) as { headlines: string[] }
         setHeadlines(data.headlines)
-      } else if (type === 'bio') {
+      } else if (tab === 'bio') {
         const data = await generateBio(profileId) as { bios: string[] }
         setBios(data.bios)
       } else {
@@ -39,139 +30,130 @@ export default function BrandingPage() {
         setBannerUrl(data.image_url)
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erro ao gerar conteúdo')
+      setError(e instanceof Error ? e.message : 'Erro ao gerar')
     } finally {
-      setLoad(type, false)
+      setLoading(false)
     }
   }
 
-  function copy(text: string) { navigator.clipboard.writeText(text) }
+  const tabs: { id: Tab; label: string }[] = [
+    { id: 'headlines', label: 'Headlines' },
+    { id: 'bio', label: 'Bio' },
+    { id: 'banner', label: 'Banner' },
+  ]
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Branding</h1>
-        <p className="text-muted-foreground text-sm mt-1">Headlines, bio e banner gerados com IA</p>
+    <div className="space-y-10">
+      <div className="space-y-1">
+        <h1 className="text-xl font-semibold text-foreground">Branding</h1>
+        <p className="text-sm text-muted-foreground">Gere headlines, bio e banner com IA a partir do seu perfil.</p>
       </div>
 
-      <Card>
-        <CardContent className="pt-6 space-y-4">
-          <div className="space-y-2">
-            <Label>Profile ID</Label>
-            <Input
-              placeholder="UUID do perfil analisado"
-              value={profileId}
-              onChange={(e) => setProfileId(e.target.value)}
-            />
-          </div>
-          {error && <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">{error}</p>}
-        </CardContent>
-      </Card>
+      <div className="max-w-lg space-y-6">
+        <div className="space-y-2">
+          <label className="text-xs text-muted-foreground">Profile ID</label>
+          <input
+            type="text"
+            value={profileId}
+            onChange={(e) => setProfileId(e.target.value)}
+            placeholder="UUID do perfil analisado"
+            className="w-full bg-muted border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+        </div>
 
-      <Tabs defaultValue="headlines">
-        <TabsList>
-          <TabsTrigger value="headlines">Headlines</TabsTrigger>
-          <TabsTrigger value="bio">Bio</TabsTrigger>
-          <TabsTrigger value="banner">Banner</TabsTrigger>
-        </TabsList>
+        <div className="flex gap-0.5 border-b border-border">
+          {tabs.map(({ id, label }) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              className={`px-3 py-2 text-sm transition-colors border-b-2 -mb-px ${
+                tab === id
+                  ? 'border-primary text-foreground font-medium'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
-        <TabsContent value="headlines" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>3 Variações de Headline</span>
-                <Button size="sm" onClick={() => handle('headlines')} disabled={loading.headlines}>
-                  {loading.headlines ? 'Gerando...' : 'Gerar'}
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {headlines.length > 0 ? (
-                <div className="space-y-3">
-                  {headlines.map((h, i) => (
-                    <div key={i} className="p-4 bg-muted rounded-lg border border-border flex justify-between items-start gap-4">
-                      <p className="text-foreground text-sm">{h}</p>
-                      <Button size="sm" variant="outline" onClick={() => copy(h)}>Copiar</Button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-sm">Clique em &quot;Gerar&quot; para criar variações otimizadas.</p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {error && (
+          <p className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-md px-3 py-2">{error}</p>
+        )}
 
-        <TabsContent value="bio" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>3 Variações de Bio</span>
-                <Button size="sm" onClick={() => handle('bio')} disabled={loading.bio}>
-                  {loading.bio ? 'Gerando...' : 'Gerar'}
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {bios.length > 0 ? (
-                <div className="space-y-4">
-                  {bios.map((b, i) => (
-                    <div key={i} className="p-4 bg-muted rounded-lg border border-border space-y-2">
-                      <div className="flex justify-between items-center">
-                        <Badge variant="outline">Variação {i + 1}</Badge>
-                        <Button size="sm" variant="outline" onClick={() => copy(b)}>Copiar</Button>
-                      </div>
-                      <p className="text-foreground text-sm whitespace-pre-wrap">{b}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-sm">Clique em &quot;Gerar&quot; para criar seu resumo profissional.</p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+        <button
+          onClick={generate}
+          disabled={loading}
+          className="bg-primary text-primary-foreground text-sm font-medium px-4 py-2 rounded-md hover:opacity-90 disabled:opacity-40 transition-opacity"
+        >
+          {loading ? 'Gerando...' : 'Gerar'}
+        </button>
+      </div>
 
-        <TabsContent value="banner" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Banner LinkedIn (1584 × 396 px)</span>
-                <Button size="sm" onClick={() => handle('banner')} disabled={loading.banner}>
-                  {loading.banner ? 'Gerando...' : 'Gerar'}
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {bannerUrl ? (
-                <>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={bannerUrl}
-                    alt="Banner LinkedIn"
-                    className="w-full rounded-lg border border-border"
-                    style={{ aspectRatio: '1584/396', objectFit: 'cover' }}
-                  />
-                  <a
-                    href={bannerUrl}
-                    download="banner-linkedin.png"
-                    className="flex h-9 w-full items-center justify-center rounded-lg border border-border text-sm text-foreground hover:bg-muted transition-colors"
-                  >
-                    Baixar Banner
-                  </a>
-                </>
-              ) : (
-                <div
-                  className="bg-muted rounded-lg flex items-center justify-center text-muted-foreground border border-border"
-                  style={{ aspectRatio: '1584/396' }}
+      {tab === 'headlines' && headlines.length > 0 && (
+        <div className="max-w-2xl space-y-3">
+          {headlines.map((h, i) => (
+            <div key={i} className="group flex items-start justify-between gap-4 p-4 rounded-lg border border-border bg-card">
+              <p className="text-sm text-foreground leading-relaxed">{h}</p>
+              <button
+                onClick={() => navigator.clipboard.writeText(h)}
+                className="shrink-0 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Copiar
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === 'bio' && bios.length > 0 && (
+        <div className="max-w-2xl space-y-4">
+          {bios.map((b, i) => (
+            <div key={i} className="rounded-lg border border-border bg-card p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground font-medium">Variação {i + 1}</span>
+                <button
+                  onClick={() => navigator.clipboard.writeText(b)}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  <p className="text-sm">Seu banner aparecerá aqui</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                  Copiar
+                </button>
+              </div>
+              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{b}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === 'banner' && (
+        <div className="max-w-2xl space-y-3">
+          {bannerUrl ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={bannerUrl}
+                alt="Banner LinkedIn"
+                className="w-full rounded-lg border border-border"
+                style={{ aspectRatio: '1584/396', objectFit: 'cover' }}
+              />
+              <a
+                href={bannerUrl}
+                download="banner-linkedin.png"
+                className="flex items-center justify-center w-full py-2 rounded-md border border-border text-sm text-muted-foreground hover:text-foreground hover:border-border/80 transition-colors"
+              >
+                Baixar Banner
+              </a>
+            </>
+          ) : (
+            <div
+              className="rounded-lg border border-dashed border-border bg-muted/30 flex items-center justify-center text-muted-foreground"
+              style={{ aspectRatio: '1584/396' }}
+            >
+              <p className="text-xs">1584 × 396 px</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
