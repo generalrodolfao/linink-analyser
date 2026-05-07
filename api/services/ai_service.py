@@ -3,7 +3,14 @@ import re
 import anthropic
 from config import settings
 
-_client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+_client: anthropic.AsyncAnthropic | None = None
+
+
+def _get_client() -> anthropic.AsyncAnthropic:
+    global _client
+    if _client is None:
+        _client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+    return _client
 
 SCORE_CRITERIA = [
     "headline", "summary", "experience", "skills",
@@ -151,7 +158,7 @@ Retorne APENAS o corpo do e-mail, sem linha de assunto."""
 
 
 async def _call_ai(prompt: str) -> str:
-    message = await _client.messages.create(
+    message = await _get_client().messages.create(
         model="claude-sonnet-4-6",
         max_tokens=2048,
         messages=[{"role": "user", "content": prompt}],
