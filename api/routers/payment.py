@@ -57,6 +57,12 @@ async def get_status(session_id: str):
     )
 
 
+@router.get("/webhook")
+async def cakto_webhook_verify():
+    """URL validation endpoint — Cakto sends a GET to verify the webhook URL."""
+    return {"ok": True, "service": "linkedin-pro-copilot"}
+
+
 @router.post("/webhook")
 async def cakto_webhook(request: Request, background_tasks: BackgroundTasks):
     """
