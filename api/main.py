@@ -25,4 +25,10 @@ app.include_router(payment.router)
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "version": "0.1.0"}
+    return {
+        "status": "ok",
+        "version": "0.1.0",
+        "anthropic_configured": bool(settings.anthropic_api_key),
+        "cakto_configured": bool(settings.cakto_checkout_url),
+        "key_prefix": settings.anthropic_api_key[:12] + "..." if settings.anthropic_api_key else "EMPTY",
+    }
