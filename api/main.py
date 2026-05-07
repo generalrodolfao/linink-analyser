@@ -32,3 +32,19 @@ async def health():
         "cakto_configured": bool(settings.cakto_checkout_url),
         "key_prefix": settings.anthropic_api_key[:12] + "..." if settings.anthropic_api_key else "EMPTY",
     }
+
+
+@app.get("/health/anthropic")
+async def health_anthropic():
+    """Test live Anthropic API connectivity."""
+    import anthropic as _anthropic
+    try:
+        client = _anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+        msg = await client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=10,
+            messages=[{"role": "user", "content": "ping"}],
+        )
+        return {"status": "ok", "response": msg.content[0].text}
+    except Exception as e:
+        return {"status": "error", "detail": str(e), "type": type(e).__name__}
