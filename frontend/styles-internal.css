@@ -111,6 +111,9 @@ em { font-style: italic; font-weight: 400; }
   min-width: 0;
   position: relative;
 }
+.app-main:not(:has(.scorebar)) {
+  grid-template-rows: 1fr;
+}
 .app-stage {
   overflow-y: auto;
   overflow-x: hidden;
@@ -308,7 +311,7 @@ em { font-style: italic; font-weight: 400; }
 
 /* ============ CONNECT SCREEN ============ */
 .connect-screen { display: grid; place-items: center; min-height: calc(100vh - 60px); padding: 40px 0; }
-.connect-shell { max-width: 720px; width: 100%; overflow: hidden; }
+.connect-shell { max-width: 720px; width: 100%; }
 .connect-eyebrow { color: var(--fg-4); display: block; margin-bottom: 20px; }
 .connect-h1 {
   font-family: var(--font-display);
