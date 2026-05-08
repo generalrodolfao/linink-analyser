@@ -746,4 +746,33 @@ em { font-style: italic; font-weight: 400; }
   .side-link span { display: none; }
   .side-brand .brand-name { display: none; }
   .audit-main, .brand-grid, .outreach-grid { grid-template-columns: 1fr; }
+  .lang-switcher { display: none; }
+}
+
+/* ── Language switcher ───────────────────────────────────────────────────── */
+.lang-switcher {
+  display: flex;
+  gap: 4px;
+  padding: 10px 16px 0;
+}
+.lang-btn {
+  appearance: none;
+  border: 1px solid oklch(0.28 0.02 270);
+  background: transparent;
+  color: oklch(0.50 0.02 270);
+  font: 500 10px/1 'JetBrains Mono', monospace;
+  letter-spacing: .05em;
+  padding: 4px 7px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.lang-btn:hover {
+  color: oklch(0.78 0.01 270);
+  border-color: oklch(0.40 0.02 270);
+}
+.lang-btn.on {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in oklch, var(--accent) 10%, transparent);
 }
