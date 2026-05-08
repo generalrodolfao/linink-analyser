@@ -3,12 +3,11 @@ import logging
 import re
 from fastapi import APIRouter, HTTPException, Request, BackgroundTasks, UploadFile, File, Form
 from pydantic import BaseModel
+from typing import Any
 from services.cakto_service import build_checkout_url, get_order, is_paid
 from services.payment_service import (
     create_session, get_session, find_session_by_order, update_session,
 )
-from services.linkedin_service import fetch_linkedin_profile
-from services.ai_service import score_profile
 from services.supabase_service import save_profile
 
 logger = logging.getLogger(__name__)
@@ -30,6 +29,7 @@ class SessionStatusResponse(BaseModel):
     status: str
     profile_id: str | None = None
     overall_score: int | None = None
+    score_breakdown: list[Any] | None = None
 
 
 @router.post("/checkout-pdf", response_model=CheckoutResponse)
@@ -80,16 +80,23 @@ async def create_checkout(req: CheckoutRequest):
 
 @router.get("/status/{session_id}", response_model=SessionStatusResponse)
 async def get_status(session_id: str):
-    """Poll this endpoint after redirecting user to Cakto. Returns status + profile_id when done."""
+    """Poll this endpoint after redirecting user to Cakto. Returns status + full analysis when done."""
     session = get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Sessão não encontrada ou expirada.")
 
+    breakdown = None
+    if session.get("analysis"):
+        analysis = session["analysis"]
+        breakdown = analysis.get("score_breakdown") if isinstance(analysis, dict) else None
+
+    logger.debug("Status poll — session=%s status=%s", session_id, session["status"])
     return SessionStatusResponse(
         session_id=session_id,
         status=session["status"],
         profile_id=session.get("profile_id"),
         overall_score=session.get("overall_score"),
+        score_breakdown=breakdown,
     )
 
 
@@ -202,19 +209,34 @@ async def verify_and_run(order_id: str, background_tasks: BackgroundTasks):
 
 
 async def _run_analysis(session_id: str) -> None:
-    """Background task: fetch + score profile and store result in session."""
+    """Background task: analyse profile and store result in session."""
     session = get_session(session_id)
     if not session:
+        logger.warning("_run_analysis: sessão %s não encontrada", session_id)
         return
 
     update_session(session_id, status="analyzing")
-    try:
-        raw_profile = await fetch_linkedin_profile(
-            session["linkedin_url"], session.get("profile_text")
-        )
-        scoring = await score_profile(raw_profile)
-        overall_score = scoring.get("overall_score", 0)
+    logger.info("Iniciando análise — session=%s", session_id)
 
+    try:
+        from services.ai_service import parse_and_score
+        from services.linkedin_service import fetch_linkedin_profile
+
+        profile_text = session.get("profile_text") or ""
+
+        if profile_text.strip():
+            # PDF text stored in session — single API call (parse + score together)
+            logger.info("parse_and_score via profile_text — session=%s chars=%d",
+                        session_id, len(profile_text))
+            raw_profile, scoring = await parse_and_score(profile_text)
+        else:
+            # No text (URL-only flow) — two separate calls
+            logger.info("fetch + score via URL — session=%s", session_id)
+            from services.ai_service import score_profile
+            raw_profile = await fetch_linkedin_profile(session["linkedin_url"])
+            scoring = await score_profile(raw_profile)
+
+        overall_score = scoring.get("overall_score", 0)
         saved = await save_profile(
             linkedin_url=session["linkedin_url"],
             profile_data=raw_profile,
@@ -228,8 +250,9 @@ async def _run_analysis(session_id: str) -> None:
             overall_score=overall_score,
             analysis=scoring,
         )
-        logger.info("Análise concluída para sessão %s — score %s", session_id, overall_score)
+        logger.info("Análise concluída — session=%s score=%s profile=%s",
+                    session_id, overall_score, saved["id"])
 
     except Exception as e:
-        logger.error("Erro na análise da sessão %s: %s", session_id, e)
+        logger.error("Erro na análise — session=%s erro=%s", session_id, e, exc_info=True)
         update_session(session_id, status="failed")

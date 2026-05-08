@@ -50,6 +50,7 @@ input { font-family: inherit; }
 .ambient .b1 { top: -20vmax; left: -10vmax; }
 .ambient .b2 { top: 60vh; right: -15vmax; animation-duration: 56s; opacity: .35; }
 .ambient .b3 { top: 130vh; left: 20vw; animation-duration: 64s; opacity: .25; }
+@keyframes spin { to { transform: rotate(360deg); } }
 @keyframes drift {
   0%   { transform: translate(0,0) scale(1); }
   50%  { transform: translate(4vmax,-3vmax) scale(1.08); }

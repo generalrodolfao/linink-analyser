@@ -33,6 +33,24 @@ CREATE TABLE IF NOT EXISTS generation_limits (
   UNIQUE (user_id, date)
 );
 
+-- Payment sessions (created before analysis, linked to Cakto order)
+CREATE TABLE IF NOT EXISTS payment_sessions (
+  id UUID PRIMARY KEY,
+  status TEXT NOT NULL DEFAULT 'pending_payment'
+    CHECK (status IN ('pending_payment','paid','analyzing','completed','failed')),
+  linkedin_url TEXT NOT NULL,
+  profile_text TEXT,
+  profile_id UUID REFERENCES profiles(id),
+  overall_score INTEGER,
+  cakto_order_id TEXT,
+  analysis JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_payment_sessions_status ON payment_sessions(status);
+CREATE INDEX IF NOT EXISTS idx_payment_sessions_order ON payment_sessions(cakto_order_id);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_profiles_user_id ON profiles(user_id);
 CREATE INDEX IF NOT EXISTS idx_profiles_created_at ON profiles(created_at DESC);

@@ -248,70 +248,153 @@ function CopilotRail({ context, accent, visible }) {
 }
 
 // ============================================================
-// TELA: CONECTAR — upload de PDF
+// TELA: CONECTAR — upload de PDF + fluxo de pagamento
+//
+// Stages:
+//   idle          → formulário de upload
+//   submitting    → chamando /payment/checkout-pdf
+//   redirecting   → redirecionando para Cakto (localStorage salvo)
+//   waiting_pay   → voltou do Cakto, aguardando confirmação do webhook
+//   analyzing     → pagamento confirmado, análise rodando no backend
+//   done          → onComplete() chamado
+//   error         → qualquer falha
 // ============================================================
+const SESSION_KEY = 'lattice_payment_session';
+
 function ConnectScreen({ onComplete, accent }) {
   const a = ACCENTS[accent];
-  const [stage, setStage] = useState("idle"); // idle | scanning | done | error
-  const [file, setFile] = useState(null);
-  const [progress, setProgress] = useState(0);
-  const [phase, setPhase] = useState("");
-  const [errMsg, setErrMsg] = useState("");
-  const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef(null);
-  const phases = [
-    "Lendo headline e posicionamento",
-    "Analisando seção Sobre",
-    "Mapeando experiências",
-    "Indexando habilidades",
-    "Avaliando cadência de atividade",
-    "Compondo diagnóstico",
-  ];
 
+  // Rehydrate from localStorage on mount (user returned from Cakto)
+  const saved = (() => { try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch { return null; } })();
+
+  const [stage, setStage]         = useState(saved ? "waiting_pay" : "idle");
+  const [sessionId, setSessionId] = useState(saved?.sessionId || null);
+  const [checkoutUrl, setCheckoutUrl] = useState(saved?.checkoutUrl || null);
+  const [file, setFile]           = useState(null);
+  const [dragOver, setDragOver]   = useState(false);
+  const [errMsg, setErrMsg]       = useState("");
+  const [pollMsg, setPollMsg]     = useState("Aguardando confirmação do pagamento…");
+
+  // ── Polling loop ──────────────────────────────────────────
+  useEffect(() => {
+    if (stage !== "waiting_pay" && stage !== "analyzing") return;
+    if (!sessionId) return;
+
+    let cancelled = false;
+    const INTERVAL = 3500;
+
+    const POLL_MESSAGES = [
+      "Aguardando confirmação do pagamento…",
+      "Verificando pagamento com a Cakto…",
+      "Quase lá — confirmando transação…",
+    ];
+    const ANALYZE_MESSAGES = [
+      "Pagamento confirmado. Iniciando análise…",
+      "Lendo headline e posicionamento…",
+      "Analisando seção Sobre…",
+      "Mapeando experiências…",
+      "Indexando habilidades e palavras-chave…",
+      "Compondo diagnóstico final…",
+    ];
+
+    let tick = 0;
+    const id = setInterval(async () => {
+      if (cancelled) return;
+      tick++;
+
+      try {
+        const res = await fetch(`${API}/payment/status/${sessionId}`);
+
+        if (res.status === 404) {
+          // Session expired or not found
+          clearInterval(id);
+          localStorage.removeItem(SESSION_KEY);
+          if (!cancelled) { setStage("error"); setErrMsg("Sessão expirada. Por favor, faça o upload novamente."); }
+          return;
+        }
+
+        if (!res.ok) return; // transient error — keep polling
+
+        const data = await res.json();
+
+        if (data.status === "completed") {
+          clearInterval(id);
+          localStorage.removeItem(SESSION_KEY);
+          if (!cancelled) {
+            setStage("done");
+            onComplete({
+              profile:        { id: data.profile_id },
+              overall_score:  data.overall_score ?? 0,
+              score_breakdown: data.score_breakdown ?? [],
+            });
+          }
+          return;
+        }
+
+        if (data.status === "failed") {
+          clearInterval(id);
+          localStorage.removeItem(SESSION_KEY);
+          if (!cancelled) { setStage("error"); setErrMsg("A análise falhou. Tente novamente."); }
+          return;
+        }
+
+        if (data.status === "analyzing" || data.status === "paid") {
+          if (!cancelled) {
+            setStage("analyzing");
+            setPollMsg(ANALYZE_MESSAGES[tick % ANALYZE_MESSAGES.length]);
+          }
+          return;
+        }
+
+        // pending_payment — still waiting
+        if (!cancelled) setPollMsg(POLL_MESSAGES[tick % POLL_MESSAGES.length]);
+
+      } catch (_) { /* network blip — ignore */ }
+    }, INTERVAL);
+
+    return () => { cancelled = true; clearInterval(id); };
+  }, [stage, sessionId]);
+
+  // ── File handling ─────────────────────────────────────────
   const handleFile = (f) => {
     if (!f) return;
-    if (!f.name.toLowerCase().endsWith('.pdf')) {
-      setErrMsg('Apenas arquivos PDF são aceitos');
-      return;
-    }
+    if (!f.name.toLowerCase().endsWith('.pdf')) { setErrMsg('Apenas arquivos PDF são aceitos'); return; }
     setErrMsg('');
     setFile(f);
   };
 
-  const handleScan = async () => {
+  // ── Submit: create session → redirect to Cakto ────────────
+  const handlePay = async () => {
     if (!file || stage !== "idle") return;
-    setStage("scanning");
-    setProgress(0);
+    setStage("submitting");
     setErrMsg("");
-    let i = 0;
-    const id = setInterval(() => {
-      i++;
-      setProgress(p => Math.min(88, p + (i < 8 ? 6 : 1)));
-      setPhase(phases[Math.min(phases.length - 1, Math.floor(i / 4))]);
-    }, 220);
     try {
       const form = new FormData();
       form.append('pdf_file', file);
-      const res = await fetch(`${API}/profile/analyze-pdf`, { method: 'POST', body: form });
-      clearInterval(id);
+      const res = await fetch(`${API}/payment/checkout-pdf`, { method: 'POST', body: form });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: 'Erro desconhecido' }));
-        throw new Error(err.detail || 'Análise falhou');
+        throw new Error(err.detail || 'Falha ao criar sessão de pagamento');
       }
-      const data = await res.json();
-      setProgress(100);
-      setPhase("Diagnóstico pronto.");
-      setStage("done");
-      setTimeout(() => onComplete(data), 900);
+      const { session_id, checkout_url } = await res.json();
+      localStorage.setItem(SESSION_KEY, JSON.stringify({ sessionId: session_id, checkoutUrl: checkout_url }));
+      setSessionId(session_id);
+      setCheckoutUrl(checkout_url);
+      setStage("redirecting");
+      setTimeout(() => { window.location.href = checkout_url; }, 800);
     } catch (e) {
-      clearInterval(id);
       setStage("error");
       setErrMsg(e.message);
     }
   };
 
-  const reset = () => { setStage("idle"); setFile(null); setProgress(0); setErrMsg(""); };
+  const reset = () => {
+    localStorage.removeItem(SESSION_KEY);
+    setStage("idle"); setFile(null); setErrMsg(""); setSessionId(null); setCheckoutUrl(null);
+  };
 
+  // ── Render ────────────────────────────────────────────────
   return (
     <div className="screen connect-screen" data-screen-label="Conectar">
       <div className="connect-shell">
@@ -320,81 +403,135 @@ function ConnectScreen({ onComplete, accent }) {
           Envie seu PDF do LinkedIn.<br/>
           <em style={{ color: a.glow }}>Vamos ler como um estrategista.</em>
         </h1>
-        <p className="connect-sub">
-          Exporte seu perfil do LinkedIn (Mais → Salvar como PDF) e envie aqui.
-          O Lattice analisa 18 sinais — posicionamento, cadência, convicção. Nada é publicado.
-        </p>
 
+        {/* ── IDLE: upload form ── */}
         {stage === "idle" && (
-          <div style={{display:'flex',flexDirection:'column',gap:'14px',maxWidth:'440px'}}>
-            <div
-              onClick={() => inputRef.current?.click()}
-              onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
-              style={{
-                border: `1.5px dashed ${file ? a.glow : dragOver ? a.soft : 'oklch(0.32 0.02 270)'}`,
-                borderRadius: '10px',
-                padding: '32px 24px',
-                textAlign: 'center',
-                cursor: 'pointer',
-                transition: 'border-color .2s, background .2s',
-                background: file ? `color-mix(in oklch, ${a.deep} 30%, transparent)` : dragOver ? 'oklch(0.20 0.02 270)' : 'transparent',
-              }}
-            >
-              <input ref={inputRef} type="file" accept=".pdf,application/pdf" style={{display:'none'}}
-                onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
-                style={{margin:'0 auto 12px',display:'block',color: file ? a.glow : 'oklch(0.48 0.02 270)'}}>
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"
-                  stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                <polyline points="14,2 14,8 20,8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              {file ? (
-                <>
-                  <p style={{color: a.glow, fontWeight: 500, fontSize: '13px', marginBottom: '4px'}}>{file.name}</p>
-                  <Mono style={{color: 'oklch(0.50 0.02 270)', fontSize: '11px'}}>{(file.size / 1024).toFixed(0)} KB · clique para trocar</Mono>
-                </>
-              ) : (
-                <>
-                  <p style={{fontWeight: 500, fontSize: '13px', marginBottom: '4px', color: 'oklch(0.85 0.01 270)'}}>Arraste o PDF do LinkedIn aqui</p>
-                  <Mono style={{color: 'oklch(0.50 0.02 270)', fontSize: '11px'}}>ou clique para selecionar</Mono>
-                </>
+          <>
+            <p className="connect-sub">
+              Exporte seu perfil do LinkedIn (Mais → Salvar como PDF) e envie aqui.
+              O Lattice analisa 18 sinais — posicionamento, cadência, convicção. Nada é publicado.
+            </p>
+            <div style={{display:'flex',flexDirection:'column',gap:'14px',maxWidth:'440px'}}>
+              <div
+                onClick={() => inputRef.current?.click()}
+                onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
+                style={{
+                  border: `1.5px dashed ${file ? a.glow : dragOver ? a.soft : 'oklch(0.32 0.02 270)'}`,
+                  borderRadius: '10px', padding: '32px 24px', textAlign: 'center',
+                  cursor: 'pointer', transition: 'border-color .2s, background .2s',
+                  background: file ? `color-mix(in oklch, ${a.deep} 30%, transparent)` : dragOver ? 'oklch(0.20 0.02 270)' : 'transparent',
+                }}
+              >
+                <input ref={inputRef} type="file" accept=".pdf,application/pdf" style={{display:'none'}}
+                  onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+                  style={{margin:'0 auto 12px',display:'block',color: file ? a.glow : 'oklch(0.48 0.02 270)'}}>
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"
+                    stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <polyline points="14,2 14,8 20,8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                {file ? (
+                  <>
+                    <p style={{color: a.glow, fontWeight:500, fontSize:'13px', marginBottom:'4px'}}>{file.name}</p>
+                    <Mono style={{color:'oklch(0.50 0.02 270)',fontSize:'11px'}}>{(file.size/1024).toFixed(0)} KB · clique para trocar</Mono>
+                  </>
+                ) : (
+                  <>
+                    <p style={{fontWeight:500, fontSize:'13px', marginBottom:'4px', color:'oklch(0.85 0.01 270)'}}>Arraste o PDF do LinkedIn aqui</p>
+                    <Mono style={{color:'oklch(0.50 0.02 270)',fontSize:'11px'}}>ou clique para selecionar</Mono>
+                  </>
+                )}
+              </div>
+              {errMsg && <Mono style={{color:'oklch(0.65 0.18 28)',fontSize:'12px'}}>{errMsg}</Mono>}
+              <button className="btn-primary lg" disabled={!file} onClick={handlePay}
+                style={{opacity: file ? 1 : 0.38, cursor: file ? 'default' : 'not-allowed'}}>
+                <span>Continuar para pagamento</span>
+                <Mono className="btn-kbd">⏎</Mono>
+              </button>
+              <div className="connect-footnotes" style={{marginTop:'4px'}}>
+                <div><Mono>·</Mono><span>Pagamento único — análise completa com 18 sinais.</span></div>
+                <div><Mono>·</Mono><span>LinkedIn: Mais → Salvar como PDF.</span></div>
+                <div><Mono>·</Mono><span>Somente leitura. Nunca publicamos em seu nome.</span></div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ── SUBMITTING: spinner ── */}
+        {stage === "submitting" && (
+          <div style={{display:'flex',alignItems:'center',gap:'14px',paddingTop:'8px'}}>
+            <div style={{width:'16px',height:'16px',borderRadius:'50%',border:`2px solid ${a.glow}`,borderTopColor:'transparent',animation:'spin 0.8s linear infinite'}} />
+            <Mono style={{color:'oklch(0.58 0.02 270)',textTransform:'none',letterSpacing:0}}>Preparando sessão de pagamento…</Mono>
+          </div>
+        )}
+
+        {/* ── REDIRECTING ── */}
+        {stage === "redirecting" && (
+          <div style={{display:'flex',flexDirection:'column',gap:'16px',maxWidth:'440px'}}>
+            <div style={{
+              background:`color-mix(in oklch, ${a.deep} 20%, transparent)`,
+              border:`1px solid color-mix(in oklch, ${a.glow} 30%, oklch(0.30 0.02 270))`,
+              borderRadius:'10px', padding:'20px 22px',
+            }}>
+              <Mono style={{color: a.glow, display:'block', marginBottom:'8px'}}>redirecionando para pagamento</Mono>
+              <p style={{margin:0,fontSize:'14px',color:'oklch(0.78 0.01 270)',lineHeight:1.5}}>
+                Você será levado ao checkout em instantes. Após o pagamento, retorne a esta página — a análise iniciará automaticamente.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ── WAITING / ANALYZING ── */}
+        {(stage === "waiting_pay" || stage === "analyzing") && (
+          <div style={{display:'flex',flexDirection:'column',gap:'20px',maxWidth:'440px'}}>
+            <div style={{
+              background:'oklch(0.16 0.014 270 / 0.6)',
+              border:'1px solid oklch(0.28 0.02 270)',
+              borderRadius:'10px', padding:'20px 22px',
+            }}>
+              <div style={{display:'flex',alignItems:'center',gap:'12px',marginBottom:'12px'}}>
+                <div style={{width:'8px',height:'8px',borderRadius:'50%',background: stage === "analyzing" ? a.glow : 'oklch(0.58 0.02 270)',boxShadow: stage === "analyzing" ? `0 0 10px ${a.glow}` : 'none',animation:'pulse 2s ease-in-out infinite'}} />
+                <Mono style={{color: stage === "analyzing" ? a.glow : 'oklch(0.58 0.02 270)', textTransform:'none', letterSpacing:0, fontSize:'12px'}}>
+                  {pollMsg}
+                </Mono>
+              </div>
+              {stage === "analyzing" && (
+                <div style={{height:'2px',background:'oklch(0.22 0.012 270)',borderRadius:'1px',overflow:'hidden'}}>
+                  <div style={{height:'100%',background:`linear-gradient(90deg, ${a.deep}, ${a.glow})`,borderRadius:'1px',width:'70%',animation:'grow 8s ease-in-out infinite alternate'}} />
+                </div>
               )}
             </div>
-            {errMsg && <Mono style={{color: 'oklch(0.65 0.18 28)', fontSize: '12px'}}>{errMsg}</Mono>}
-            <button className="btn-primary lg" disabled={!file} onClick={handleScan}
-              style={{opacity: file ? 1 : 0.38, cursor: file ? 'default' : 'not-allowed'}}>
-              <span>Iniciar análise</span>
-              <Mono className="btn-kbd">⏎</Mono>
-            </button>
-          </div>
-        )}
 
-        <div className={`scan-stage ${stage !== 'idle' ? stage : ''}`}>
-          <ScanVisual progress={progress} accent={a} />
-          <div className="scan-meta">
-            <Mono className="scan-phase">
-              {stage === "scanning" ? phase
-                : stage === "done" ? "Diagnóstico pronto."
-                : stage === "error" ? errMsg
-                : "Aguardando PDF…"}
-            </Mono>
-            {progress > 0 && stage !== "idle" && (
-              <Mono className="scan-pct" style={{ color: a.glow }}>{progress}%</Mono>
+            {checkoutUrl && stage === "waiting_pay" && (
+              <div style={{display:'flex',gap:'10px'}}>
+                <button className="btn-primary sm" onClick={() => { window.location.href = checkoutUrl; }}>
+                  Ir para pagamento
+                </button>
+                <button className="btn-ghost sm" onClick={reset}>Cancelar</button>
+              </div>
             )}
-          </div>
-        </div>
+            {stage === "waiting_pay" && !checkoutUrl && (
+              <button className="btn-ghost sm" style={{alignSelf:'flex-start'}} onClick={reset}>Cancelar e recomeçar</button>
+            )}
 
-        {stage === "error" && (
-          <button className="btn-ghost sm" onClick={reset} style={{marginTop:'16px'}}>Tentar novamente</button>
+            <div className="connect-footnotes">
+              <div><Mono>·</Mono><span>Feche e reabra esta página após o pagamento se a análise não iniciar.</span></div>
+              <div><Mono>·</Mono><span>A análise leva entre 15 e 30 segundos após a confirmação.</span></div>
+            </div>
+          </div>
         )}
 
-        <div className="connect-footnotes">
-          <div><Mono>·</Mono><span>Somente leitura. Nunca publicamos em seu nome.</span></div>
-          <div><Mono>·</Mono><span>LinkedIn: Mais → Salvar como PDF.</span></div>
-          <div><Mono>·</Mono><span>A análise leva entre 10 e 20 segundos.</span></div>
-        </div>
+        {/* ── ERROR ── */}
+        {stage === "error" && (
+          <div style={{display:'flex',flexDirection:'column',gap:'16px',maxWidth:'440px'}}>
+            <Mono style={{color:'oklch(0.65 0.18 28)',fontSize:'12px',background:'oklch(0.65 0.18 28 / 0.08)',border:'1px solid oklch(0.65 0.18 28 / 0.20)',borderRadius:'8px',padding:'10px 14px',textTransform:'none',letterSpacing:0}}>
+              {errMsg || 'Ocorreu um erro inesperado.'}
+            </Mono>
+            <button className="btn-ghost sm" style={{alignSelf:'flex-start'}} onClick={reset}>Tentar novamente</button>
+          </div>
+        )}
       </div>
     </div>
   );
