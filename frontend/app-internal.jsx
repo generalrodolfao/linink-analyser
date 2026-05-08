@@ -261,12 +261,31 @@ function CopilotRail({ context, accent, visible }) {
 // ============================================================
 const SESSION_KEY = 'lattice_payment_session';
 
+function _resolveInitialSession() {
+  // 1. URL param utm_content (user returning from Cakto via /dashboard/profile redirect)
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const utmSession = params.get('utm_content');
+    if (utmSession) {
+      // Sync to localStorage so polling survives page reloads
+      const saved = (() => { try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch { return null; } })();
+      const entry = saved?.sessionId === utmSession ? saved : { sessionId: utmSession, checkoutUrl: null };
+      localStorage.setItem(SESSION_KEY, JSON.stringify(entry));
+      // Clean the URL without reloading
+      const clean = window.location.pathname + (window.location.hash || '');
+      window.history.replaceState(null, '', clean);
+      return entry;
+    }
+  } catch (_) {}
+  // 2. localStorage (user already had session in progress)
+  try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch { return null; }
+}
+
 function ConnectScreen({ onComplete, accent }) {
   const a = ACCENTS[accent];
   const inputRef = useRef(null);
 
-  // Rehydrate from localStorage on mount (user returned from Cakto)
-  const saved = (() => { try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch { return null; } })();
+  const saved = _resolveInitialSession();
 
   const [stage, setStage]         = useState(saved ? "waiting_pay" : "idle");
   const [sessionId, setSessionId] = useState(saved?.sessionId || null);

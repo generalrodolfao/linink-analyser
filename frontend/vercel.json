@@ -4,5 +4,8 @@
   "framework": null,
   "rewrites": [
     { "source": "/app", "destination": "/app.html" }
+  ],
+  "redirects": [
+    { "source": "/dashboard/:path*", "destination": "/app", "permanent": false }
   ]
 }
