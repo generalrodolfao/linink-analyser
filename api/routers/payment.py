@@ -212,11 +212,11 @@ async def _run_analysis(session_id: str) -> None:
     """Background task: analyse profile and store result in session."""
     session = get_session(session_id)
     if not session:
-        logger.warning("_run_analysis: sessão %s não encontrada", session_id)
+        logger.error("_run_analysis: sessão %s não encontrada (processo reiniciou?)", session_id)
         return
 
     update_session(session_id, status="analyzing")
-    logger.info("Iniciando análise — session=%s", session_id)
+    logger.info("Iniciando análise — session=%s linkedin=%s", session_id, session.get("linkedin_url"))
 
     try:
         from services.ai_service import parse_and_score
@@ -225,18 +225,19 @@ async def _run_analysis(session_id: str) -> None:
         profile_text = session.get("profile_text") or ""
 
         if profile_text.strip():
-            # PDF text stored in session — single API call (parse + score together)
             logger.info("parse_and_score via profile_text — session=%s chars=%d",
                         session_id, len(profile_text))
             raw_profile, scoring = await parse_and_score(profile_text)
         else:
-            # No text (URL-only flow) — two separate calls
-            logger.info("fetch + score via URL — session=%s", session_id)
+            logger.info("fetch + score via URL — session=%s url=%s",
+                        session_id, session.get("linkedin_url"))
             from services.ai_service import score_profile
             raw_profile = await fetch_linkedin_profile(session["linkedin_url"])
             scoring = await score_profile(raw_profile)
 
         overall_score = scoring.get("overall_score", 0)
+        logger.info("Claude concluiu análise — session=%s overall_score=%s", session_id, overall_score)
+
         saved = await save_profile(
             linkedin_url=session["linkedin_url"],
             profile_data=raw_profile,
@@ -254,5 +255,65 @@ async def _run_analysis(session_id: str) -> None:
                     session_id, overall_score, saved["id"])
 
     except Exception as e:
-        logger.error("Erro na análise — session=%s erro=%s", session_id, e, exc_info=True)
+        logger.error("ERRO NA ANÁLISE — session=%s tipo=%s erro=%s",
+                     session_id, type(e).__name__, e, exc_info=True)
         update_session(session_id, status="failed")
+
+
+# ── Debug / diagnostics ──────────────────────────────────────────────────────
+
+@router.get("/health/db")
+async def payment_db_health():
+    """Check Supabase connectivity and whether payment_sessions table exists."""
+    from services.supabase_service import _db as db
+    if not db:
+        return {"supabase": False, "reason": "SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurados", "sessions_in_memory": True}
+    try:
+        result = db.table("payment_sessions").select("id").limit(1).execute()
+        return {"supabase": True, "table_ok": True, "sample_rows": len(result.data)}
+    except Exception as e:
+        return {"supabase": True, "table_ok": False, "error": str(e)}
+
+
+@router.get("/debug/{session_id}")
+async def debug_session(session_id: str):
+    """Return raw session data for debugging. Remove before GA."""
+    from services.payment_service import _sessions
+    from services.supabase_service import _db as db
+
+    mem = _sessions.get(session_id)
+    supa = None
+    if db:
+        try:
+            result = db.table("payment_sessions").select("id,status,overall_score,cakto_order_id,created_at,expires_at").eq("id", session_id).execute()
+            supa = result.data[0] if result.data else None
+        except Exception as e:
+            supa = {"error": str(e)}
+
+    return {
+        "session_id": session_id,
+        "in_memory": bool(mem),
+        "in_memory_status": mem.get("status") if mem else None,
+        "in_supabase": bool(supa and "error" not in supa),
+        "supabase_data": supa,
+    }
+
+
+@router.post("/trigger-analysis/{session_id}")
+async def trigger_analysis(session_id: str, background_tasks: BackgroundTasks):
+    """
+    Manually re-trigger analysis for a paid session. Use when webhook fired
+    but analysis never started (e.g., after a process restart wiped in-memory state).
+    """
+    session = get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+    if session["status"] == "completed":
+        return {"ok": True, "message": "Análise já concluída.", "status": session["status"]}
+    if session["status"] == "analyzing":
+        return {"ok": True, "message": "Análise em andamento.", "status": session["status"]}
+    if session["status"] not in ("paid", "failed"):
+        raise HTTPException(status_code=400, detail=f"Status '{session['status']}' não permite re-análise. Pagamento confirmado?")
+
+    background_tasks.add_task(_run_analysis, session_id)
+    return {"ok": True, "message": "Análise iniciada.", "session_id": session_id}

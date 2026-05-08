@@ -25,11 +25,15 @@ app.include_router(payment.router)
 
 @app.get("/health")
 async def health():
+    from services.supabase_service import _db as _supa_db
+    supabase_connected = _supa_db is not None
     return {
         "status": "ok",
         "version": "0.1.0",
         "anthropic_configured": bool(settings.anthropic_api_key),
         "cakto_configured": bool(settings.cakto_checkout_url),
+        "supabase_configured": supabase_connected,
+        "session_persistence": "supabase" if supabase_connected else "in-memory (unreliable)",
         "key_prefix": settings.anthropic_api_key[:12] + "..." if settings.anthropic_api_key else "EMPTY",
     }
 
