@@ -6,6 +6,7 @@ class Settings(BaseSettings):
 
     anthropic_api_key: str = ""
     openai_api_key: str = ""
+    openrouter_api_key: str = ""
     proxycurl_api_key: str = ""
     replicate_api_token: str = ""
     supabase_url: str = ""

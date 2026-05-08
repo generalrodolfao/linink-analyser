@@ -1,7 +1,32 @@
 import re
 import json
 import anthropic
+from openai import AsyncOpenAI
 from config import settings
+
+_OPENROUTER_MODEL = "openai/gpt-4o-mini"
+_openrouter_client: AsyncOpenAI | None = None
+
+
+def _get_openrouter_client() -> AsyncOpenAI:
+    global _openrouter_client
+    if _openrouter_client is None:
+        _openrouter_client = AsyncOpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=settings.openrouter_api_key,
+        )
+    return _openrouter_client
+
+
+def _to_openai_tool(tool: dict) -> dict:
+    return {
+        "type": "function",
+        "function": {
+            "name": tool["name"],
+            "description": tool.get("description", ""),
+            "parameters": tool["input_schema"],
+        },
+    }
 
 _PAGE_MARKER = re.compile(r'\s*Page \d+ of \d+\s*', re.IGNORECASE)
 _HTML_ENTITY = re.compile(r'&amp;|&lt;|&gt;|&quot;')
@@ -190,6 +215,21 @@ _PITCHES_TOOL = {
 
 async def _call_tool(system: str, user: str, tool: dict, max_tokens: int = 4096) -> dict:
     """Force a tool call; returns the tool input dict (always valid JSON)."""
+    if settings.ai_provider == "openrouter":
+        resp = await _get_openrouter_client().chat.completions.create(
+            model=_OPENROUTER_MODEL,
+            max_tokens=max_tokens,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            tools=[_to_openai_tool(tool)],
+            tool_choice={"type": "function", "function": {"name": tool["name"]}},
+        )
+        args = resp.choices[0].message.tool_calls[0].function.arguments
+        return json.loads(args)
+
+    # Anthropic (default)
     message = await _get_client().messages.create(
         model="claude-sonnet-4-6",
         max_tokens=max_tokens,
@@ -206,6 +246,15 @@ async def _call_tool(system: str, user: str, tool: dict, max_tokens: int = 4096)
 
 async def _call_text(prompt: str, max_tokens: int = 2048) -> str:
     """Plain text call — used only for SVG and email (free-form output)."""
+    if settings.ai_provider == "openrouter":
+        resp = await _get_openrouter_client().chat.completions.create(
+            model=_OPENROUTER_MODEL,
+            max_tokens=max_tokens,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return resp.choices[0].message.content or ""
+
+    # Anthropic (default)
     message = await _get_client().messages.create(
         model="claude-sonnet-4-6",
         max_tokens=max_tokens,
